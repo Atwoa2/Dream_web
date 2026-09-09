@@ -80,6 +80,8 @@ export async function findUserByTokenHash(tokenHash: string): Promise<User | nul
       avatarUrl: users.avatarUrl,
       emailVerifiedAt: users.emailVerifiedAt,
       stripeCustomerId: users.stripeCustomerId,
+      cardBrand: users.cardBrand,
+      cardLast4: users.cardLast4,
       createdAt: users.createdAt,
     })
     .from(sessions)

@@ -41,5 +41,5 @@ makes the module impossible to change without breaking half the project.
 | `users` | 0 | basic CRUD ready |
 | `auth` | 1 | ready: email-code + Google, sessions, audit |
 | `rate-limit` | 1 | action rate limiting |
-| `billing` | 3 | Stripe: subscriptions, payments, portal |
+| `billing` | 3 | ready: Checkout, Portal, webhooks, credits |
 | `api-keys` | 4 | keys, usage metering, credit deduction |

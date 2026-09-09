@@ -6,6 +6,8 @@ export type User = {
   avatarUrl: string | null;
   emailVerifiedAt: Date | null;
   stripeCustomerId: string | null;
+  cardBrand: string | null;
+  cardLast4: string | null;
   createdAt: Date;
 };
 

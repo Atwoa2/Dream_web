@@ -87,7 +87,7 @@ spent.
 | **0** | repository, skeleton, DB schema, CI, documentation | done |
 | **1** | email-code and Google sign-in, sessions, rate limiting | done (backend + minimal UI) |
 | **2** | account area: profile, navigation | done (skeleton) |
-| **3** | Stripe: payments, subscription, Billing tab, webhooks | |
+| **3** | Stripe: payments, subscription, Billing tab, webhooks | done (needs Stripe keys to go live) |
 | **4** | API keys, gateway, usage metering, credits | |
 
 Stripe comes after the account area not because it is hard, but because it

@@ -25,6 +25,9 @@ export const users = pgTable(
     avatarUrl: text("avatar_url"),
     /** Stripe Customer id (cus_...). The link to billing. */
     stripeCustomerId: text("stripe_customer_id"),
+    /** Card display data (brand + last4 only), filled by Stripe webhooks. */
+    cardBrand: text("card_brand"),
+    cardLast4: text("card_last4"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

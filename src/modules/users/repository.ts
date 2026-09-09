@@ -23,6 +23,15 @@ export async function findByEmail(email: string): Promise<User | null> {
   return row ?? null;
 }
 
+export async function findByStripeCustomerId(customerId: string): Promise<User | null> {
+  const [row] = await db
+    .select()
+    .from(users)
+    .where(eq(users.stripeCustomerId, customerId))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function create(input: CreateUserInput): Promise<User> {
   const [row] = await db
     .insert(users)
@@ -45,5 +54,17 @@ export async function setStripeCustomerId(
   await db
     .update(users)
     .set({ stripeCustomerId, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
+/** Display data only — never full card numbers (we never see those at all). */
+export async function setCardDisplay(
+  userId: string,
+  brand: string | null,
+  last4: string | null,
+): Promise<void> {
+  await db
+    .update(users)
+    .set({ cardBrand: brand, cardLast4: last4, updatedAt: new Date() })
     .where(eq(users.id, userId));
 }

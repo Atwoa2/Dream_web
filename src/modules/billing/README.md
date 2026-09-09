@@ -16,7 +16,7 @@ Otherwise the account area is slow and goes down together with Stripe.
 `success_url` is just the address the browser returned to. It can be opened by
 hand; it can also never be reached. Payment is confirmed by the Stripe event.
 
-## Planned interface
+## Interface (implemented)
 
 ```ts
 createCheckoutSession(userId, priceId, mode): Promise<{ url: string }>

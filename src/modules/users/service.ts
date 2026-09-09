@@ -34,6 +34,18 @@ export async function findOrCreateByEmail(input: {
   });
 }
 
+export async function getUserByStripeCustomerId(customerId: string): Promise<User | null> {
+  return repo.findByStripeCustomerId(customerId);
+}
+
 export async function linkStripeCustomer(userId: string, customerId: string): Promise<void> {
   await repo.setStripeCustomerId(userId, customerId);
+}
+
+export async function saveCardDisplay(
+  userId: string,
+  brand: string | null,
+  last4: string | null,
+): Promise<void> {
+  await repo.setCardDisplay(userId, brand, last4);
 }
