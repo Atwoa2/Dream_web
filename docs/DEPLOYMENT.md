@@ -39,8 +39,9 @@ Manual deploy from a checkout:
 vercel deploy --prod --yes
 ```
 
-Recommended: connect the GitHub repo in Vercel (Project → Settings → Git) so
-every push to `main` deploys automatically and every PR gets a preview URL.
+The GitHub repo is connected to Vercel (done 2026-09-09): every push to
+`main` deploys to production automatically, and every PR gets a preview URL.
+Manual `vercel deploy` is no longer needed.
 
 Migrations are applied from a developer machine for now:
 
@@ -78,3 +79,4 @@ prices, set the live keys + a dashboard webhook endpoint
       legacy SPA bundle on GitHub Pages)
 - [ ] Claim the Stripe sandbox before 2026-09-16
 - [ ] Enforce 2FA + branch protection on `main` once collaborators join
+- [x] Connect the GitHub repo in Vercel for automatic deploys (2026-09-09)
