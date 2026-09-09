@@ -12,6 +12,8 @@ export const AUTH = {
   OTP_TTL_MINUTES: 10,
   /** Verification attempts before the code burns — brute-force guard. */
   OTP_MAX_ATTEMPTS: 5,
+  /** Seconds between two code requests for the same address. */
+  OTP_RESEND_COOLDOWN_SECONDS: 60,
   /** Code requests allowed per email per window. */
   OTP_REQUESTS_PER_WINDOW: 3,
   OTP_WINDOW_MINUTES: 15,

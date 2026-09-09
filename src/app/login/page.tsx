@@ -1,20 +1,24 @@
 "use client";
 
 /**
- * Minimal sign-in page: email → code, or Google.
- * Deliberately unstyled beyond basics — real design arrives with the ported
- * static site (stage 2).
+ * Sign-in page: email → code, or Google.
+ *
+ * The server enforces a 60-second cooldown between code requests; the UI
+ * mirrors it with a visible countdown so "resend" is predictable instead of
+ * surprising users with "Too many requests".
  */
 import { useEffect, useState, type FormEvent } from "react";
 
 type Step = "email" | "code";
+
+const COOLDOWN_SECONDS = 60;
 
 const field: React.CSSProperties = {
   width: "100%",
   padding: "0.65rem 0.8rem",
   borderRadius: 8,
   border: "1px solid var(--border)",
-  background: "transparent",
+  background: "#fff",
   color: "var(--fg)",
   fontSize: "1rem",
 };
@@ -36,6 +40,7 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   // The Google callback redirects here with ?error=google on any failure.
   useEffect(() => {
@@ -44,6 +49,13 @@ export default function LoginPage() {
       setError("Google sign-in failed. Try again or use an email code.");
     }
   }, []);
+
+  // Tick the resend countdown once a second.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown((s) => s - 1), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown > 0]);
 
   async function post(path: string, body: unknown): Promise<boolean> {
     setBusy(true);
@@ -56,9 +68,14 @@ export default function LoginPage() {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as {
-          error?: { message?: string };
+          error?: { code?: string; message?: string };
         } | null;
-        setError(data?.error?.message ?? "Something went wrong");
+        if (data?.error?.code === "RATE_LIMITED") {
+          setError("Too many requests — wait a minute and try again.");
+          setCooldown(COOLDOWN_SECONDS);
+        } else {
+          setError(data?.error?.message ?? "Something went wrong");
+        }
         return false;
       }
       return true;
@@ -67,9 +84,15 @@ export default function LoginPage() {
     }
   }
 
+  async function sendCode(): Promise<boolean> {
+    const ok = await post("/api/auth/email/request", { email });
+    if (ok) setCooldown(COOLDOWN_SECONDS);
+    return ok;
+  }
+
   async function handleEmail(e: FormEvent) {
     e.preventDefault();
-    if (await post("/api/auth/email/request", { email })) setStep("code");
+    if (await sendCode()) setStep("code");
   }
 
   async function handleCode(e: FormEvent) {
@@ -94,8 +117,15 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             autoFocus
           />
-          <button style={{ ...button, marginTop: "0.75rem" }} disabled={busy}>
-            {busy ? "Sending…" : "Send code"}
+          <button
+            style={{ ...button, marginTop: "0.75rem" }}
+            disabled={busy || cooldown > 0}
+          >
+            {busy
+              ? "Sending…"
+              : cooldown > 0
+                ? `Send code (${cooldown}s)`
+                : "Send code"}
           </button>
         </form>
       ) : (
@@ -119,10 +149,23 @@ export default function LoginPage() {
           </button>
           <button
             type="button"
-            onClick={() => setStep("email")}
+            onClick={() => void sendCode()}
+            disabled={busy || cooldown > 0}
             style={{
               ...button,
               marginTop: "0.5rem",
+              background: "transparent",
+              color: cooldown > 0 ? "var(--muted)" : "var(--accent)",
+            }}
+          >
+            {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep("email")}
+            style={{
+              ...button,
+              marginTop: "0.25rem",
               background: "transparent",
               color: "var(--muted)",
             }}
@@ -163,7 +206,7 @@ export default function LoginPage() {
       </a>
 
       {error && (
-        <p style={{ color: "#ff6b6b", marginTop: "1rem", fontSize: "0.9rem" }}>{error}</p>
+        <p style={{ color: "#b3261e", marginTop: "1rem", fontSize: "0.9rem" }}>{error}</p>
       )}
     </main>
   );

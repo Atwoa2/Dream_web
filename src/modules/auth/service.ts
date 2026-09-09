@@ -31,8 +31,12 @@ async function issueSession(userId: string): Promise<IssuedSession> {
 export async function requestEmailCode(rawEmail: string, meta: RequestMeta): Promise<void> {
   const email = normalizeEmail(rawEmail);
 
-  // Both limits: per address (flooding someone's inbox) and per IP (one
-  // attacker rotating addresses runs up our email bill).
+  // Cooldown first: at most one code per address per minute — this is the
+  // limit users actually meet, and it makes "resend" behavior predictable.
+  await enforceLimit(`otp:cooldown:${email}`, 1, AUTH.OTP_RESEND_COOLDOWN_SECONDS);
+
+  // Both coarser limits: per address (flooding someone's inbox) and per IP
+  // (one attacker rotating addresses runs up our email bill).
   await enforceLimit(
     `otp:req:email:${email}`,
     AUTH.OTP_REQUESTS_PER_WINDOW,
