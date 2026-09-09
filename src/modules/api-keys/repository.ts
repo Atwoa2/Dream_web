@@ -1,19 +1,36 @@
 /**
- * DB access for API keys and usage events.
+ * Store access for API keys and usage events.
+ *
+ * Firestore layout:
+ *   api_keys/{autoId}       — keyHash field is queried on gateway auth
+ *   usage_events/{autoId}   — aggregated server-side for the Usage page
  */
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { apiKeys, usageEvents } from "@/db/schema";
+import { store } from "@/lib/firebase-store";
 import type { ApiKeyInfo, UsageEventInfo, UsageSummary } from "./types";
 
-const keyInfoColumns = {
-  id: apiKeys.id,
-  name: apiKeys.name,
-  keyPrefix: apiKeys.keyPrefix,
-  lastUsedAt: apiKeys.lastUsedAt,
-  revokedAt: apiKeys.revokedAt,
-  createdAt: apiKeys.createdAt,
+const API_KEYS = "api_keys";
+const USAGE_EVENTS = "usage_events";
+
+type ApiKeyDoc = {
+  userId: string;
+  keyHash: string;
+  keyPrefix: string;
+  name: string;
+  lastUsedAt: Date | null;
+  revokedAt: Date | null;
+  createdAt: Date;
 };
+
+function toInfo(doc: ApiKeyDoc & { id: string }): ApiKeyInfo {
+  return {
+    id: doc.id,
+    name: doc.name,
+    keyPrefix: doc.keyPrefix,
+    lastUsedAt: doc.lastUsedAt ?? null,
+    revokedAt: doc.revokedAt ?? null,
+    createdAt: doc.createdAt,
+  };
+}
 
 export async function insertKey(input: {
   userId: string;
@@ -21,78 +38,102 @@ export async function insertKey(input: {
   keyPrefix: string;
   name: string;
 }): Promise<ApiKeyInfo> {
-  const [row] = await db.insert(apiKeys).values(input).returning(keyInfoColumns);
-  if (!row) throw new Error("Failed to create API key");
-  return row;
+  const createdAt = new Date();
+  const id = await store.add(API_KEYS, {
+    ...input,
+    lastUsedAt: null,
+    revokedAt: null,
+    createdAt,
+  });
+  return {
+    id,
+    name: input.name,
+    keyPrefix: input.keyPrefix,
+    lastUsedAt: null,
+    revokedAt: null,
+    createdAt,
+  };
 }
 
 export async function listKeysForUser(userId: string): Promise<ApiKeyInfo[]> {
-  return db
-    .select(keyInfoColumns)
-    .from(apiKeys)
-    .where(eq(apiKeys.userId, userId))
-    .orderBy(desc(apiKeys.createdAt));
+  const rows = await store.query<ApiKeyDoc>(API_KEYS, [["userId", "==", userId]]);
+  rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return rows.map(toInfo);
 }
 
 /**
- * Revokes only when the key belongs to the user — the ownership check and the
- * write are one statement, so there is no window to exploit between them.
+ * Revokes only when the key belongs to the user — the ownership check and
+ * the write happen inside one transaction, so there is no window to exploit
+ * between them.
  */
 export async function revokeKeyOwnedBy(userId: string, keyId: string): Promise<boolean> {
-  const rows = await db
-    .update(apiKeys)
-    .set({ revokedAt: new Date() })
-    .where(and(eq(apiKeys.id, keyId), eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt)))
-    .returning({ id: apiKeys.id });
-  return rows.length > 0;
+  return store.transaction(async (tx, db) => {
+    const ref = db.collection(API_KEYS).doc(keyId);
+    const doc = await tx.get(ref);
+    if (!doc.exists) return false;
+    const data = doc.data() as { userId: string; revokedAt: unknown };
+    if (data.userId !== userId || data.revokedAt !== null) return false;
+    tx.update(ref, { revokedAt: new Date() });
+    return true;
+  });
 }
 
 /** For the API gateway: hash lookup of a live key. */
 export async function findActiveKeyByHash(
   keyHash: string,
 ): Promise<{ id: string; userId: string } | null> {
-  const [row] = await db
-    .select({ id: apiKeys.id, userId: apiKeys.userId })
-    .from(apiKeys)
-    .where(and(eq(apiKeys.keyHash, keyHash), isNull(apiKeys.revokedAt)))
-    .limit(1);
-  return row ?? null;
+  const rows = await store.query<ApiKeyDoc>(API_KEYS, [["keyHash", "==", keyHash]], {
+    limit: 1,
+  });
+  const row = rows[0];
+  if (!row || row.revokedAt !== null) return null;
+  return { id: row.id, userId: row.userId };
 }
 
 export async function touchKey(keyId: string): Promise<void> {
-  await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, keyId));
+  await store.update(API_KEYS, keyId, { lastUsedAt: new Date() });
 }
 
 // --- usage ------------------------------------------------------------------
 
+type UsageDoc = {
+  apiKeyId: string;
+  userId: string;
+  model: string;
+  tokensIn: number;
+  tokensOut: number;
+  costCents: number;
+  createdAt: Date;
+};
+
 export async function summarizeUsageForUser(userId: string): Promise<UsageSummary> {
-  const [row] = await db
-    .select({
-      requests: sql<number>`count(*)::int`,
-      tokensIn: sql<number>`coalesce(sum(${usageEvents.tokensIn}), 0)::int`,
-      tokensOut: sql<number>`coalesce(sum(${usageEvents.tokensOut}), 0)::int`,
-      costCents: sql<number>`coalesce(sum(${usageEvents.costCents}), 0)::int`,
-    })
-    .from(usageEvents)
-    .where(eq(usageEvents.userId, userId));
-  return row ?? { requests: 0, tokensIn: 0, tokensOut: 0, costCents: 0 };
+  const { count, sums } = await store.aggregate(
+    USAGE_EVENTS,
+    [["userId", "==", userId]],
+    ["tokensIn", "tokensOut", "costCents"],
+  );
+  return {
+    requests: count,
+    tokensIn: sums.tokensIn ?? 0,
+    tokensOut: sums.tokensOut ?? 0,
+    costCents: sums.costCents ?? 0,
+  };
 }
 
 export async function listRecentUsageForUser(
   userId: string,
   limit = 50,
 ): Promise<UsageEventInfo[]> {
-  return db
-    .select({
-      id: usageEvents.id,
-      model: usageEvents.model,
-      tokensIn: usageEvents.tokensIn,
-      tokensOut: usageEvents.tokensOut,
-      costCents: usageEvents.costCents,
-      createdAt: usageEvents.createdAt,
-    })
-    .from(usageEvents)
-    .where(eq(usageEvents.userId, userId))
-    .orderBy(desc(usageEvents.createdAt))
-    .limit(limit);
+  const rows = await store.query<UsageDoc>(USAGE_EVENTS, [["userId", "==", userId]], {
+    limit: 500,
+  });
+  rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return rows.slice(0, limit).map((row) => ({
+    id: row.id,
+    model: row.model,
+    tokensIn: row.tokensIn,
+    tokensOut: row.tokensOut,
+    costCents: row.costCents,
+    createdAt: row.createdAt,
+  }));
 }

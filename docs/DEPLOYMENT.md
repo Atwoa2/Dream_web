@@ -8,7 +8,7 @@ live in the team password manager and Vercel env vars — never here.
 | Service | What | Identifier |
 |---|---|---|
 | GitHub | repository | `Atwoa2/Dream_web` |
-| Neon | production PostgreSQL 18 | project `blue-pine-01504359` (aws-us-west-2) |
+| Firebase | Firestore data store | project: Dream Labs Platform (GCP) |
 | Vercel | hosting | project `dream-web` |
 | Stripe | payments | claimable sandbox `acct_1UDqqnElr7TdOV7Z` (see below) |
 
@@ -17,7 +17,8 @@ live in the team password manager and Vercel env vars — never here.
 The full list with comments is in `.env.example`. Production values are set in
 Vercel → Project → Settings → Environment Variables.
 
-Set in production so far: `DATABASE_URL` (Neon), `APP_ENV`, `APP_URL`.
+Set in production so far: `FIREBASE_SERVICE_ACCOUNT`, `APP_ENV`, `APP_URL`
+(the Neon `DATABASE_URL` is retired after the Firestore migration).
 
 Still missing in production (features degrade gracefully until set):
 
@@ -43,11 +44,8 @@ The GitHub repo is connected to Vercel (done 2026-09-09): every push to
 `main` deploys to production automatically, and every PR gets a preview URL.
 Manual `vercel deploy` is no longer needed.
 
-Migrations are applied from a developer machine for now:
-
-```bash
-DATABASE_URL="<neon connection string>" npx drizzle-kit migrate
-```
+There are no schema migrations: Firestore collections are created on first
+write. The one-time Postgres import lives in `scripts/migrate-to-firestore.mjs`.
 
 ## Stripe sandbox (temporary!)
 

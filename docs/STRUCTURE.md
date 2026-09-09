@@ -18,23 +18,21 @@ src/
     rate-limit/           action rate limiting
     audit/                sensitive-action journal
     dream-api/            server-side proxy to the robot backend
-  db/
-    schema/               tables, split by domain
-    index.ts              PostgreSQL connection
   lib/                    infrastructure, no business logic
+    firebase.ts           Firebase Admin initialization
+    firebase-store.ts     FirebaseStore — all Firestore reads/writes
     env.ts                environment variable validation
     errors.ts             typed errors
     logger.ts             JSON logs
   config/
     constants.ts          every numeric constant in the app
 docs/                     documentation
-drizzle/                  generated migrations (committed to git!)
 ```
 
 ## The main rule — layers
 
 ```
-app/  →  modules/  →  db/
+app/  →  modules/  →  FirebaseStore
 ```
 
 Left to right only.
@@ -43,7 +41,7 @@ Left to right only.
 |---|---|---|
 | `app/` | accept the request, check permissions, call a module, return the response | contain business logic, touch `db` directly |
 | `modules/` | business rules | know about HTTP, `Request`, cookies |
-| `db/` | schema and connection | contain queries |
+| `FirebaseStore` | Firestore reads/writes, Timestamp↔Date conversion | contain business rules |
 
 Why this matters: the moment a page starts querying the database itself, the
 rule "does this user have access" gets smeared across ten files. Then one
@@ -75,8 +73,8 @@ import { findById } from "@/modules/users/repository";  // no
 - **Imports** — via the `@/` alias, never `../../../`.
 - **Money** — integers in cents. Never `float`.
 - **Dates** — always `timestamptz`, UTC in code. Local time only at display.
-- **DB naming** — `snake_case`; TypeScript — `camelCase`. The mapping is
-  declared explicitly in the schema.
+- **Store naming** — collections `snake_case`, fields `camelCase` (they map
+  1:1 to TypeScript).
 - **Errors** — via `AppError` from `lib/errors.ts`. Only `code` and `message`
   leave the server; never stack traces.
 - **Logs** — via `logger`, not `console.log`. No secrets, email codes, or API
@@ -89,7 +87,7 @@ import { findById } from "@/modules/users/repository";  // no
 | New page | `app/<path>/page.tsx` |
 | New HTTP endpoint | `app/api/<path>/route.ts` |
 | New business rule | `modules/<domain>/service.ts` |
-| New DB query | `modules/<domain>/repository.ts` |
-| New table | `src/db/schema/<domain>.ts` + migration |
+| New store query | `modules/<domain>/repository.ts` |
+| New collection | document it in the module README |
 | Utility without business logic | `lib/` |
 | Constant or limit | `config/constants.ts` |

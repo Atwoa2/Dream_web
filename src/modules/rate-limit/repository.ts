@@ -1,31 +1,46 @@
-import { sql } from "drizzle-orm";
-import { db } from "@/db";
-import { rateLimits } from "@/db/schema";
+/**
+ * Fixed-window counters in Firestore: rate_limits/{key}.
+ *
+ * The read-check-write runs inside a transaction, so concurrent requests
+ * cannot race the counter — the same guarantee the SQL upsert used to give.
+ */
+import { store } from "@/lib/firebase-store";
+
+const RATE_LIMITS = "rate_limits";
 
 /**
- * Atomic counter increment: a single INSERT ... ON CONFLICT statement, so
- * races between concurrent requests are impossible.
- *
- * The window comparison happens entirely in SQL (now() minus an interval) —
- * passing JS Dates into raw sql fragments serializes them in a format
- * Postgres rejects, and it would also trust the app server's clock over the
- * database's.
+ * Atomic counter increment. When the window has expired, the counter
+ * restarts at 1. Returns the count within the current window.
  */
 export async function increment(
   key: string,
   windowSeconds: number,
 ): Promise<number> {
-  const [row] = await db
-    .insert(rateLimits)
-    .values({ key, windowStartedAt: new Date(), count: 1 })
-    .onConflictDoUpdate({
-      target: rateLimits.key,
-      set: {
-        count: sql`CASE WHEN ${rateLimits.windowStartedAt} < now() - make_interval(secs => ${windowSeconds}) THEN 1 ELSE ${rateLimits.count} + 1 END`,
-        windowStartedAt: sql`CASE WHEN ${rateLimits.windowStartedAt} < now() - make_interval(secs => ${windowSeconds}) THEN now() ELSE ${rateLimits.windowStartedAt} END`,
-      },
-    })
-    .returning({ count: rateLimits.count });
+  const now = Date.now();
+  const cutoff = now - windowSeconds * 1000;
 
-  return row?.count ?? 1;
+  return store.transaction(async (tx, db) => {
+    const ref = db.collection(RATE_LIMITS).doc(key);
+    const doc = await tx.get(ref);
+
+    if (!doc.exists) {
+      tx.set(ref, { windowStartedAt: new Date(now), count: 1 });
+      return 1;
+    }
+
+    const data = doc.data() as {
+      windowStartedAt?: { toMillis(): number };
+      count?: number;
+    };
+    const startedAt = data.windowStartedAt?.toMillis() ?? 0;
+
+    if (startedAt < cutoff) {
+      tx.set(ref, { windowStartedAt: new Date(now), count: 1 });
+      return 1;
+    }
+
+    const count = (data.count ?? 0) + 1;
+    tx.update(ref, { count });
+    return count;
+  });
 }

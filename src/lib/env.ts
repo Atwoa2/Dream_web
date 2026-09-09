@@ -15,9 +15,6 @@ const schema = z.object({
   APP_URL: z.string().url(),
   APP_ENV: z.enum(["development", "preview", "production"]).default("development"),
 
-  // --- database ---
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-
   // --- authentication (stage 1) ---
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters").optional(),
   AUTH_GOOGLE_ID: z.string().optional(),
@@ -33,6 +30,10 @@ const schema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRICE_SUBSCRIPTION: z.string().optional(),
   STRIPE_PRICE_CREDITS_PACK: z.string().optional(),
+
+  // --- Firebase (data store) ---
+  // Base64-encoded service-account JSON. Server-side only.
+  FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
 
   // --- robot backend proxy ---
   DREAM_API_URL: z.string().url().optional(),
