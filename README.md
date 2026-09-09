@@ -30,12 +30,10 @@ cp .env.example .env.local
 
 Fill in `.env.local`:
 
-- `DATABASE_URL` — your own database. Locally via Docker:
-  ```bash
-  docker run -d --name dreamlabs-db -p 5432:5432 \
-    -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=dreamlabs postgres:16
+- `FIREBASE_SERVICE_ACCOUNT` — base64 of the service-account JSON:
+  ```powershell
+  [Convert]::ToBase64String([IO.File]::ReadAllBytes("firebase-key.json"))
   ```
-  then `DATABASE_URL="postgresql://postgres:postgres@localhost:5432/dreamlabs"`
 - `APP_URL` — keep `http://localhost:3000`
 
 The remaining variables belong to later stages and can be left empty for now.

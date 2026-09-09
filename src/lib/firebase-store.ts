@@ -17,7 +17,6 @@
  * every read converts them back so the rest of the code never sees them.
  */
 import {
-  AggregateField,
   FieldValue,
   Timestamp,
   type DocumentSnapshot,
@@ -144,29 +143,6 @@ export class FirebaseStore {
     fn: (tx: Transaction, db: FirebaseFirestore.Firestore) => Promise<T>,
   ): Promise<T> {
     return this.db.runTransaction((tx) => fn(tx, this.db));
-  }
-
-  /** Server-side aggregates: count plus sums of the given numeric fields. */
-  async aggregate(
-    collection: string,
-    where: Where[],
-    sums: string[],
-  ): Promise<{ count: number; sums: Record<string, number> }> {
-    let q: FirebaseFirestore.Query = this.db.collection(collection);
-    for (const [field, op, value] of where) q = q.where(field, op, value);
-
-    const spec: Record<string, FirebaseFirestore.AggregateField<number>> = {
-      count: AggregateField.count(),
-    };
-    for (const field of sums) {
-      spec[`sum_${field}`] = AggregateField.sum(field);
-    }
-
-    const result = await q.aggregate(spec).get();
-    const data = result.data() as Record<string, number>;
-    const out: Record<string, number> = {};
-    for (const field of sums) out[field] = data[`sum_${field}`] ?? 0;
-    return { count: data.count ?? 0, sums: out };
   }
 
   /** Convert Timestamps in a raw doc — exposed for transaction callbacks. */

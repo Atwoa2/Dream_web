@@ -107,17 +107,21 @@ type UsageDoc = {
 };
 
 export async function summarizeUsageForUser(userId: string): Promise<UsageSummary> {
-  const { count, sums } = await store.aggregate(
-    USAGE_EVENTS,
-    [["userId", "==", userId]],
-    ["tokensIn", "tokensOut", "costCents"],
-  );
-  return {
-    requests: count,
-    tokensIn: sums.tokensIn ?? 0,
-    tokensOut: sums.tokensOut ?? 0,
-    costCents: sums.costCents ?? 0,
-  };
+  // Sum in memory over a single-field query (auto-indexed). Firestore's
+  // server-side aggregate would need a composite index per field set; summing
+  // here keeps deploys index-free. When usage volume grows, this moves to a
+  // denormalized per-user counter written on each usage event.
+  const rows = await store.query<UsageDoc>(USAGE_EVENTS, [["userId", "==", userId]], {
+    limit: 10000,
+  });
+  const summary: UsageSummary = { requests: 0, tokensIn: 0, tokensOut: 0, costCents: 0 };
+  for (const row of rows) {
+    summary.requests += 1;
+    summary.tokensIn += row.tokensIn;
+    summary.tokensOut += row.tokensOut;
+    summary.costCents += row.costCents;
+  }
+  return summary;
 }
 
 export async function listRecentUsageForUser(

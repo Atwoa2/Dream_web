@@ -32,7 +32,6 @@ jobs:
           # secrets are never passed to CI.
           APP_URL: http://localhost:3000
           APP_ENV: development
-          DATABASE_URL: postgresql://user:pass@localhost:5432/db
 
   secrets:
     name: Leaked secrets scan
