@@ -12,7 +12,9 @@ import { z } from "zod";
  */
 const schema = z.object({
   // --- application ---
-  APP_URL: z.string().url(),
+  // Optional because Vercel preview deployments get a fresh URL every time;
+  // it is derived from VERCEL_URL below when not set explicitly.
+  APP_URL: z.string().url().optional(),
   APP_ENV: z.enum(["development", "preview", "production"]).default("development"),
 
   // --- authentication (stage 1) ---
@@ -52,7 +54,20 @@ if (!parsed.success) {
   );
 }
 
-export const env = parsed.data;
+/**
+ * APP_URL resolution: explicit value first (local dev, production), then the
+ * deployment's own URL that Vercel injects (previews get a fresh one per
+ * deploy). Missing both is a configuration error.
+ */
+const appUrl =
+  parsed.data.APP_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
+
+if (!appUrl) {
+  throw new Error("APP_URL is not set and VERCEL_URL is unavailable — set APP_URL");
+}
+
+export const env = { ...parsed.data, APP_URL: appUrl };
 
 /**
  * Disaster guard: a live Stripe key outside production means someone copied
