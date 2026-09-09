@@ -48,8 +48,8 @@ export async function createCheckoutSession(
     mode: product === "subscription" ? "subscription" : "payment",
     line_items: [{ price: priceFor(product), quantity: 1 }],
     // success_url is a UX nicety only — access is granted by the webhook.
-    success_url: `${env.APP_URL}/account/billing?status=success`,
-    cancel_url: `${env.APP_URL}/account/billing?status=canceled`,
+    success_url: `${env.APP_URL}/billing?status=success`,
+    cancel_url: `${env.APP_URL}/billing?status=canceled`,
     client_reference_id: userId,
     metadata: { user_id: userId, product },
     ...(product === "subscription"
@@ -66,7 +66,7 @@ export async function createBillingPortalSession(userId: string): Promise<{ url:
   const customerId = await ensureStripeCustomer(userId);
   const session = await stripe().billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${env.APP_URL}/account/billing`,
+    return_url: `${env.APP_URL}/billing`,
   });
   return { url: session.url };
 }

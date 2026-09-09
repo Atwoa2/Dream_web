@@ -5,5 +5,6 @@ export {
   getUserByStripeCustomerId,
   linkStripeCustomer,
   saveCardDisplay,
+  updateName,
 } from "./service";
 export type { User, CreateUserInput } from "./types";

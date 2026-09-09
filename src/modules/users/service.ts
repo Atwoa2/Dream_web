@@ -42,6 +42,10 @@ export async function linkStripeCustomer(userId: string, customerId: string): Pr
   await repo.setStripeCustomerId(userId, customerId);
 }
 
+export async function updateName(userId: string, name: string | null): Promise<void> {
+  await repo.setName(userId, name);
+}
+
 export async function saveCardDisplay(
   userId: string,
   brand: string | null,

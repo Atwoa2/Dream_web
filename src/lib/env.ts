@@ -33,6 +33,10 @@ const schema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRICE_SUBSCRIPTION: z.string().optional(),
   STRIPE_PRICE_CREDITS_PACK: z.string().optional(),
+
+  // --- robot backend proxy ---
+  DREAM_API_URL: z.string().url().optional(),
+  DREAM_API_TOKEN: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

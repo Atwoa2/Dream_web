@@ -57,6 +57,13 @@ export async function setStripeCustomerId(
     .where(eq(users.id, userId));
 }
 
+export async function setName(userId: string, name: string | null): Promise<void> {
+  await db
+    .update(users)
+    .set({ name, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
 /** Display data only — never full card numbers (we never see those at all). */
 export async function setCardDisplay(
   userId: string,

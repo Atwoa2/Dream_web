@@ -28,6 +28,11 @@ export default async function BillingPage() {
 
   return (
     <>
+      <h1 className="page-title">Billing</h1>
+      <p className="page-sub">
+        Payments run through Stripe. History and status live in our database,
+        updated by webhooks.
+      </p>
       <section className="card">
         <h2>Plan</h2>
         {subscription ? (

@@ -4,7 +4,7 @@
  */
 import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { accounts, auditLog, emailOtp, sessions, users } from "@/db/schema";
+import { accounts, emailOtp, sessions, users } from "@/db/schema";
 import type { User } from "@/modules/users";
 
 // --- one-time codes ---------------------------------------------------------
@@ -124,16 +124,3 @@ export async function createAccount(
   await db.insert(accounts).values({ userId, provider, providerAccountId });
 }
 
-// --- audit ------------------------------------------------------------------
-
-export async function writeAudit(
-  action: string,
-  meta: { userId?: string | null; ip?: string | null; userAgent?: string | null },
-): Promise<void> {
-  await db.insert(auditLog).values({
-    action,
-    userId: meta.userId ?? null,
-    ip: meta.ip ?? null,
-    userAgent: meta.userAgent ?? null,
-  });
-}

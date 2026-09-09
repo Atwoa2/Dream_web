@@ -7,7 +7,7 @@ export function SignOutButton() {
   }
 
   return (
-    <button className="btn-ghost" onClick={handleClick}>
+    <button className="btn-ghost" style={{ width: "100%" }} onClick={handleClick}>
       Sign out
     </button>
   );

@@ -42,4 +42,6 @@ makes the module impossible to change without breaking half the project.
 | `auth` | 1 | ready: email-code + Google, sessions, audit |
 | `rate-limit` | 1 | action rate limiting |
 | `billing` | 3 | ready: Checkout, Portal, webhooks, credits |
-| `api-keys` | 4 | keys, usage metering, credit deduction |
+| `api-keys` | 4 | keys + usage live; gateway auth ready, GPU gateway pending |
+| `audit` | 1 | ready: shared sensitive-action journal |
+| `dream-api` | — | ready: server-side proxy to the robot backend |

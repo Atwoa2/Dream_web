@@ -9,6 +9,7 @@ import { enforceLimit } from "@/modules/rate-limit";
 import { findOrCreateByEmail, type User } from "@/modules/users";
 import { normalizeEmail } from "@/modules/users/repository";
 import { sendOtpEmail } from "./email";
+import { recordAudit } from "@/modules/audit";
 import * as repo from "./repository";
 import type { GoogleProfile, IssuedSession, RequestMeta } from "./types";
 
@@ -48,7 +49,7 @@ export async function requestEmailCode(rawEmail: string, meta: RequestMeta): Pro
   await repo.replaceOtp(email, sha256(code), expiresAt);
 
   await sendOtpEmail(email, code);
-  await repo.writeAudit("auth.code_requested", { ip: meta.ip, userAgent: meta.userAgent });
+  await recordAudit("auth.code_requested", { ip: meta.ip, userAgent: meta.userAgent });
 }
 
 export async function verifyEmailCode(
@@ -69,7 +70,7 @@ export async function verifyEmailCode(
   if (attempts > AUTH.OTP_MAX_ATTEMPTS) throw INVALID_CODE();
 
   if (!safeEqualHex(sha256(code), otp.codeHash)) {
-    await repo.writeAudit("auth.code_failed", { ip: meta.ip, userAgent: meta.userAgent });
+    await recordAudit("auth.code_failed", { ip: meta.ip, userAgent: meta.userAgent });
     throw INVALID_CODE();
   }
 
@@ -77,7 +78,7 @@ export async function verifyEmailCode(
 
   const user = await findOrCreateByEmail({ email, emailVerified: true });
   const session = await issueSession(user.id);
-  await repo.writeAudit("auth.signed_in_email", {
+  await recordAudit("auth.signed_in_email", {
     userId: user.id,
     ip: meta.ip,
     userAgent: meta.userAgent,
@@ -111,7 +112,7 @@ export async function signInWithGoogle(
   }
 
   const session = await issueSession(userId);
-  await repo.writeAudit("auth.signed_in_google", {
+  await recordAudit("auth.signed_in_google", {
     userId,
     ip: meta.ip,
     userAgent: meta.userAgent,
@@ -128,7 +129,7 @@ export async function getUserBySessionToken(token: string): Promise<User | null>
 export async function signOut(token: string, meta: RequestMeta): Promise<void> {
   const user = await repo.findUserByTokenHash(sha256(token));
   await repo.deleteSessionByTokenHash(sha256(token));
-  await repo.writeAudit("auth.signed_out", {
+  await recordAudit("auth.signed_out", {
     userId: user?.id,
     ip: meta.ip,
     userAgent: meta.userAgent,

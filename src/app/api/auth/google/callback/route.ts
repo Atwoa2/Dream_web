@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       userAgent: request.headers.get("user-agent"),
     });
 
-    const response = NextResponse.redirect(new URL("/", env.APP_URL));
+    const response = NextResponse.redirect(new URL("/api-keys", env.APP_URL));
     response.cookies.delete(OAUTH_STATE_COOKIE);
     response.cookies.set(
       SESSION_COOKIE,

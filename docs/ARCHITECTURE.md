@@ -88,7 +88,7 @@ spent.
 | **1** | email-code and Google sign-in, sessions, rate limiting | done (backend + minimal UI) |
 | **2** | account area: profile, navigation | done (skeleton) |
 | **3** | Stripe: payments, subscription, Billing tab, webhooks | done (needs Stripe keys to go live) |
-| **4** | API keys, gateway, usage metering, credits | |
+| **4** | API keys, gateway, usage metering, credits | keys, usage and credits live; GPU gateway pending |
 
 Stripe comes after the account area not because it is hard, but because it
 needs a user to attach the Customer to.

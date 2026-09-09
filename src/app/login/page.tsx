@@ -67,7 +67,7 @@ export default function LoginPage() {
   async function handleCode(e: FormEvent) {
     e.preventDefault();
     if (await post("/api/auth/email/verify", { email, code })) {
-      window.location.href = "/";
+      window.location.href = "/api-keys";
     }
   }
 

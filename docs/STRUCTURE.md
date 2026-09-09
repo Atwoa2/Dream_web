@@ -12,10 +12,12 @@ src/
       health/             service liveness check
   modules/                ALL business logic
     users/                profile, Stripe Customer linkage
-    auth/                 email-code and Google sign-in       (stage 1)
-    billing/              Stripe: subscriptions, payments     (stage 3)
-    api-keys/             keys, usage, credits                (stage 4)
+    auth/                 email-code and Google sign-in
+    billing/              Stripe: subscriptions, payments, webhooks
+    api-keys/             keys, usage metering, credits
     rate-limit/           action rate limiting
+    audit/                sensitive-action journal
+    dream-api/            server-side proxy to the robot backend
   db/
     schema/               tables, split by domain
     index.ts              PostgreSQL connection
