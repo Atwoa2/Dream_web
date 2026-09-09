@@ -4,11 +4,11 @@ import { db } from "@/db";
 import { logger } from "@/lib/logger";
 
 /**
- * Проверка живости сервиса: отвечает ли приложение и доступна ли база.
- * Используется мониторингом и при деплое.
+ * Liveness check: does the app respond and is the database reachable.
+ * Used by monitoring and during deploys.
  *
- * Наружу отдаём только «ok / degraded» — текст ошибки БД содержит имена хостов
- * и пользователей, показывать его в открытом эндпоинте нельзя.
+ * Only "ok / degraded" leaves the server — a DB error message contains host
+ * and user names and must not appear on a public endpoint.
  */
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export async function GET() {
     await db.execute(sql`select 1`);
     return NextResponse.json({ status: "ok", database: "up" });
   } catch (error) {
-    logger.error("healthcheck: база недоступна", {
+    logger.error("healthcheck: database unreachable", {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json({ status: "degraded", database: "down" }, { status: 503 });

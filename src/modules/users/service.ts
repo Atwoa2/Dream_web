@@ -1,5 +1,5 @@
 /**
- * Бизнес-правила работы с пользователями.
+ * Business rules for working with users.
  */
 import { notFound } from "@/lib/errors";
 import * as repo from "./repository";
@@ -7,15 +7,15 @@ import type { User } from "./types";
 
 export async function getUser(id: string): Promise<User> {
   const user = await repo.findById(id);
-  if (!user) throw notFound("Пользователь не найден");
+  if (!user) throw notFound("User not found");
   return user;
 }
 
 /**
- * Находит пользователя по email или создаёт нового.
+ * Finds a user by email or creates a new one.
  *
- * Нужен для обоих способов входа: и код на почту, и Google приводят к одному
- * аккаунту, если адрес совпадает. Дублей пользователей быть не должно.
+ * Needed by both sign-in methods: the email code and Google both lead to the
+ * same account when the address matches. Duplicate users must not exist.
  */
 export async function findOrCreateByEmail(input: {
   email: string;

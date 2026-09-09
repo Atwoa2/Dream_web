@@ -1,55 +1,56 @@
-# Работа в команде
+# Team workflow
 
-## Ветки
+## Branches
 
-- `main` — всегда рабочая. С неё идёт деплой в прод. Прямой push запрещён.
-- Задача → своя ветка → pull request → ревью → merge.
+- `main` — always deployable. Production deploys from it. Direct pushes are
+  disabled.
+- Task → branch → pull request → review → merge.
 
-Именование: `feature/email-auth`, `fix/webhook-duplicate`, `chore/ci`.
+Naming: `feature/email-auth`, `fix/webhook-duplicate`, `chore/ci`.
 
-## Pull request
+## Pull requests
 
-Проходит только если:
+A PR merges only when:
 
-1. CI зелёный (типы, линтер, сборка, gitleaks).
-2. Есть апрув второго разработчика.
+1. CI is green (types, lint, build, gitleaks).
+2. A second developer has approved.
 
-На что смотрим при ревью в первую очередь:
+Review priorities:
 
-- нет ли обращения к `db` напрямую из `app/` в обход модуля;
-- есть ли фильтр по `user_id` во всех запросах к данным пользователя;
-- не попал ли секрет в код или в лог.
+- no direct `db` access from `app/` bypassing a module;
+- a `user_id` filter present in every query for user data;
+- no secret in code or logs.
 
-## Окружения
+## Environments
 
-| Окружение | Кто пользуется | База | Ключи Stripe |
+| Environment | Used by | Database | Stripe keys |
 |---|---|---|---|
-| local | каждый у себя | своя | test |
-| preview | автоматически на каждый PR | общая тестовая | test |
-| production | пользователи | боевая | **live** |
+| local | each developer | their own | test |
+| preview | automatic, per PR | shared test | test |
+| production | users | production | **live** |
 
-Vercel создаёт preview-деплой на каждый PR — ревьюер открывает ссылку и щёлкает
-по живой версии вместо чтения диффов.
+Vercel creates a preview deploy for every PR — the reviewer clicks through a
+live version instead of reading diffs.
 
-## База данных у разработчика
+## Developer databases
 
-У каждого своя копия. Общая dev-база на всех работает ровно до первого
-конфликта миграций: один накатил изменение схемы, у второго всё сломалось.
+Everyone gets their own copy. A shared dev database works right up to the
+first migration conflict: one person changes the schema, everyone else breaks.
 
-Варианты: локальный PostgreSQL в Docker или ветки базы в Neon.
+Options: local PostgreSQL in Docker, or Neon database branches.
 
-Миграции лежат в git и накатываются командой `npm run db:migrate`.
-Правило: миграции только вперёд. Уже слитую в `main` миграцию не редактируем —
-у остальных она уже применена.
+Migrations live in git and are applied with `npm run db:migrate`.
+Rule: migrations are forward-only. A migration merged into `main` is never
+edited — others have already applied it.
 
-## Stripe в команде
+## Stripe in a team
 
-- Аккаунт один. Разработчики приглашаются в Dashboard → Settings → Team
-  с ролью `Developer`.
-- Test-ключи общие, их можно раздать команде.
-- **Webhook-секрет у каждого свой.** Команда
+- One account. Developers are invited via Dashboard → Settings → Team with
+  the `Developer` role.
+- Test keys are shared and may be given to the whole team.
+- **The webhook secret is personal.**
   `stripe listen --forward-to localhost:3000/api/stripe/webhook`
-  выдаёт персональный `whsec_...`, работающий только на этой машине. Значение
-  из чужого конфига не подойдёт — это регулярный источник путаницы.
-- `price_id` в test и live разные, поэтому живут в переменных окружения,
-  а не в коде.
+  prints a personal `whsec_...` that works only on that machine. A value from
+  someone else's config will not work — a regular source of confusion.
+- `price_id` values differ between test and live, so they live in environment
+  variables, not in code.

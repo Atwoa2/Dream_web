@@ -1,4 +1,4 @@
-/** Пользователь в том виде, в каком его видит остальное приложение. */
+/** The user as the rest of the application sees them. */
 export type User = {
   id: string;
   email: string;

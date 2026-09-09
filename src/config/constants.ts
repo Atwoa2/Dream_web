@@ -1,41 +1,44 @@
 /**
- * Числовые константы приложения в одном месте.
+ * Every numeric constant of the application in one place.
  *
- * Смысл: «почему код живёт 10 минут» — вопрос, на который должен быть один
- * ответ в одном файле, а не пять разных магических чисел по коду.
+ * The point: "why does a code live 10 minutes" must have one answer in one
+ * file — not five different magic numbers across the codebase.
  */
 
 export const AUTH = {
-  /** Длина кода из письма. */
+  /** Digits in the emailed code. */
   OTP_LENGTH: 6,
-  /** Срок жизни кода. */
+  /** Code lifetime. */
   OTP_TTL_MINUTES: 10,
-  /** Попыток ввода до сгорания кода — защита от перебора. */
+  /** Verification attempts before the code burns — brute-force guard. */
   OTP_MAX_ATTEMPTS: 5,
-  /** Запросов кода на один email. */
+  /** Code requests allowed per email per window. */
   OTP_REQUESTS_PER_WINDOW: 3,
   OTP_WINDOW_MINUTES: 15,
-  /** Срок жизни сессии. */
+  /** Code requests allowed per IP per window (many emails, one attacker). */
+  OTP_REQUESTS_PER_IP: 10,
+  /** Session lifetime. */
   SESSION_TTL_DAYS: 30,
 } as const;
 
 export const API_KEYS = {
   PREFIX_LIVE: "dl_live_",
   PREFIX_TEST: "dl_test_",
-  /** Байт энтропии в ключе. */
+  /** Bytes of entropy in a key. */
   ENTROPY_BYTES: 32,
-  /** Сколько символов ключа показываем в списке. */
+  /** How many leading characters of a key are shown in lists. */
   VISIBLE_PREFIX_LENGTH: 12,
 } as const;
 
 export const BILLING = {
   DEFAULT_CURRENCY: "usd",
-  /** Статусы, при которых доступ к продукту открыт. */
+  /** Statuses that grant product access. */
   ACTIVE_STATUSES: ["active", "trialing"] as const,
   /**
-   * Сколько дней сохраняем доступ при неудачном списании.
-   * Stripe в это время делает повторные попытки (Smart Retries) — отключать
-   * клиента сразу означает терять тех, у кого просто перевыпущена карта.
+   * Days of access kept after a failed charge.
+   * Stripe retries the charge during this window (Smart Retries) — cutting
+   * the client off instantly means losing people whose card was merely
+   * reissued.
    */
   PAST_DUE_GRACE_DAYS: 7,
 } as const;

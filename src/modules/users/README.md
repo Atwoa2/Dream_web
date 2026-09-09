@@ -1,10 +1,11 @@
 # users
 
-Профиль пользователя: создание, поиск, связка со Stripe Customer.
+User profile: creation, lookup, Stripe Customer linkage.
 
-**Отвечает за:** таблицу `users`, правило «один email — один аккаунт».
+**Responsible for:** the `users` table, the "one email — one account" rule.
 
-**Не отвечает за:** вход в систему и сессии (это `auth`), деньги (это `billing`).
+**Not responsible for:** signing in and sessions (that is `auth`), money
+(that is `billing`).
 
-Ключевая функция — `findOrCreateByEmail`. Вход по коду на почту и вход через
-Google оба приводят в один и тот же аккаунт, если адрес совпадает.
+The key function is `findOrCreateByEmail`. Email-code sign-in and Google
+sign-in both land in the same account when the address matches.

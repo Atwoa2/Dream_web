@@ -1,8 +1,9 @@
 /**
- * Логирование в формате JSON — так логи читаются машиной в Vercel/Datadog.
+ * JSON logging — machine-readable in Vercel/Datadog.
  *
- * КРИТИЧНО: в логи никогда не попадают секреты, коды из писем, API-ключи и
- * номера карт. Логи хранятся долго и видны более широкому кругу людей, чем база.
+ * CRITICAL: secrets, email codes, API keys and card numbers never go into
+ * logs. Logs are retained for a long time and are visible to a wider circle
+ * than the database.
  */
 
 type Level = "debug" | "info" | "warn" | "error";

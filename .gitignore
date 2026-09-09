@@ -1,34 +1,34 @@
-# зависимости
+# dependencies
 node_modules/
 .pnp
 .pnp.js
 
-# сборка
+# build output
 .next/
 out/
 build/
 dist/
 
-# секреты — НИКОГДА не коммитим
+# secrets — NEVER committed
 .env
 .env.local
 .env.*.local
 *.pem
 *.key
 
-# логи
+# logs
 npm-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# окружение разработчика
+# developer environment
 .DS_Store
 Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
 
-# прочее
+# misc
 .vercel
 *.tsbuildinfo
 next-env.d.ts

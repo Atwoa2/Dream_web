@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 /**
  * Security headers.
- * Применяются ко всем маршрутам. CSP намеренно строгая — при добавлении
- * внешних скриптов (аналитика, Stripe.js) домены нужно вносить сюда явно.
+ * Applied to every route. The CSP is deliberately strict — external scripts
+ * (analytics, Stripe.js) must have their domains added here explicitly.
  */
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },

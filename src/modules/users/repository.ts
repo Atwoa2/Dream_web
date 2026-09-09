@@ -1,12 +1,12 @@
 /**
- * Доступ к таблице users. Единственное место в модуле, где есть запросы к БД.
+ * Access to the users table. The only place in the module with DB queries.
  */
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import type { CreateUserInput, User } from "./types";
 
-/** Email всегда сравниваем в нижнем регистре: Petya@ и petya@ — один человек. */
+/** Emails always compare lowercased: Petya@ and petya@ are the same person. */
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 export async function findById(id: string): Promise<User | null> {
@@ -34,7 +34,7 @@ export async function create(input: CreateUserInput): Promise<User> {
     })
     .returning();
 
-  if (!row) throw new Error("Не удалось создать пользователя");
+  if (!row) throw new Error("Failed to create user");
   return row;
 }
 

@@ -1,8 +1,8 @@
 /**
- * Пользователи и аутентификация.
+ * Users and authentication.
  *
- * Паролей в системе нет: вход только по одноразовому коду на email или через
- * Google. Хранить нечего — красть нечего.
+ * There are no passwords in the system: sign-in is a one-time email code or
+ * Google OAuth. Nothing stored — nothing to steal.
  */
 import {
   pgTable,
@@ -19,11 +19,11 @@ export const users = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").notNull(),
-    /** Момент подтверждения email. null = ещё не подтверждён. */
+    /** When the email was confirmed. null = not confirmed yet. */
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     name: text("name"),
     avatarUrl: text("avatar_url"),
-    /** Идентификатор Customer в Stripe (cus_...). Связка с биллингом. */
+    /** Stripe Customer id (cus_...). The link to billing. */
     stripeCustomerId: text("stripe_customer_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -35,9 +35,9 @@ export const users = pgTable(
 );
 
 /**
- * Привязки внешних провайдеров (Google).
- * Один пользователь может иметь несколько привязок — вход по email и через
- * Google с тем же адресом ведут в ОДИН аккаунт, а не в два разных.
+ * External provider links (Google).
+ * One user may hold several links — email sign-in and Google sign-in with the
+ * same address lead to ONE account, not two.
  */
 export const accounts = pgTable(
   "accounts",
@@ -56,7 +56,7 @@ export const accounts = pgTable(
   ],
 );
 
-/** Активные сессии. Токен хранится хэшем — утечка таблицы не даёт войти. */
+/** Active sessions. The token is stored hashed — a leaked table grants no access. */
 export const sessions = pgTable(
   "sessions",
   {
@@ -75,10 +75,11 @@ export const sessions = pgTable(
 );
 
 /**
- * Одноразовые коды для входа по email.
+ * One-time email sign-in codes.
  *
- * Хранится ХЭШ кода, не сам код. Счётчик попыток защищает от перебора:
- * 6 цифр — это миллион вариантов, без лимита они подбираются за минуты.
+ * The HASH of the code is stored, never the code. The attempt counter guards
+ * against brute force: 6 digits is a million variants, and without a limit
+ * they fall in minutes.
  */
 export const emailOtp = pgTable(
   "email_otp",

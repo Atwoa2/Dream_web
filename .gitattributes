@@ -1,8 +1,8 @@
-# В репозитории всегда LF. Иначе на Windows и macOS файлы разъезжаются,
-# и в diff попадает весь файл вместо реальных изменений.
+# LF everywhere in the repository. Otherwise files diverge between Windows
+# and macOS, and diffs show the whole file instead of the actual change.
 * text=auto eol=lf
 
-# Бинарные файлы не трогаем.
+# Binary files stay untouched.
 *.png binary
 *.jpg binary
 *.ico binary

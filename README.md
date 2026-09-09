@@ -1,80 +1,80 @@
 # Dream_web
 
-Веб-платформа DreamLabs: личный кабинет, оплата через Stripe, доступ к модели
-по API.
+DreamLabs web platform: user account area, Stripe payments, and API access to
+our model.
 
-**Состояние:** этап 0 — каркас проекта. Приложение поднимается, база
-описана, аутентификация и платежи ещё не реализованы.
+**Status:** stage 0 — project skeleton. The app boots, the database schema is
+defined; authentication and payments are not implemented yet.
 
-## Стек
+## Stack
 
-Next.js 15 (App Router) · TypeScript · PostgreSQL + Drizzle · Auth.js · Stripe
+Next.js 15 (App Router) · TypeScript · PostgreSQL + Drizzle · Stripe
 
-## Запуск за 15 минут
+## Up and running in 15 minutes
 
-Нужен **Node.js 20+** и доступ к PostgreSQL.
+Requires **Node.js 20+** and access to PostgreSQL.
 
 ```bash
-git clone https://github.com/Atwoa2/Dream_web.git
+git clone git@github.com:Atwoa2/Dream_web.git
 cd Dream_web
 npm install
 ```
 
-Переменные окружения:
+Environment variables:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Заполнить в `.env.local`:
+Fill in `.env.local`:
 
-- `DATABASE_URL` — своя база. Локально через Docker:
+- `DATABASE_URL` — your own database. Locally via Docker:
   ```bash
   docker run -d --name dreamlabs-db -p 5432:5432 \
     -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=dreamlabs postgres:16
   ```
-  тогда `DATABASE_URL="postgresql://postgres:postgres@localhost:5432/dreamlabs"`
-- `APP_URL` — оставить `http://localhost:3000`
+  then `DATABASE_URL="postgresql://postgres:postgres@localhost:5432/dreamlabs"`
+- `APP_URL` — keep `http://localhost:3000`
 
-Остальные переменные понадобятся на следующих этапах, пока их можно не трогать.
+The remaining variables belong to later stages and can be left empty for now.
 
-Схема базы и запуск:
+Database schema and startup:
 
 ```bash
-npm run db:generate   # сгенерировать миграции из схемы
-npm run db:migrate    # накатить на свою базу
+npm run db:generate   # generate migrations from the schema
+npm run db:migrate    # apply them to your database
 npm run dev
 ```
 
-Проверка: <http://localhost:3000/api/health> должен ответить
+Check: <http://localhost:3000/api/health> should respond with
 `{"status":"ok","database":"up"}`.
 
-## Команды
+## Commands
 
-| Команда | Что делает |
+| Command | Purpose |
 |---|---|
-| `npm run dev` | режим разработки |
-| `npm run build` | production-сборка |
-| `npm run typecheck` | проверка типов |
-| `npm run lint` | линтер |
-| `npm run db:generate` | сгенерировать миграцию из изменённой схемы |
-| `npm run db:migrate` | накатить миграции |
-| `npm run db:studio` | визуальный просмотр базы |
+| `npm run dev` | development mode |
+| `npm run build` | production build |
+| `npm run typecheck` | type checking |
+| `npm run lint` | linter |
+| `npm run db:generate` | generate a migration from schema changes |
+| `npm run db:migrate` | apply migrations |
+| `npm run db:studio` | visual database browser |
 
-## Документация
+## Documentation
 
-Прочитать перед первым коммитом:
+Read before your first commit:
 
-| Документ | О чём |
+| Document | Covers |
 |---|---|
-| [docs/STRUCTURE.md](docs/STRUCTURE.md) | где какой код лежит, правило слоёв, куда класть новое |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | как устроена система целиком и почему так |
-| [docs/SECURITY.md](docs/SECURITY.md) | секреты, ключи, требования безопасности |
-| [docs/WORKFLOW.md](docs/WORKFLOW.md) | ветки, ревью, окружения, Stripe в команде |
+| [docs/STRUCTURE.md](docs/STRUCTURE.md) | where code lives, the layer rule, where new code goes |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | how the system works as a whole and why |
+| [docs/SECURITY.md](docs/SECURITY.md) | secrets, keys, security requirements |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | branches, reviews, environments, Stripe in a team |
 
-## Два правила, которые важнее остальных
+## The two rules that matter most
 
-1. **Секреты не коммитим.** Никогда, ни в каком виде. Подробности —
+1. **Never commit secrets.** Not ever, in any form. Details:
    [docs/SECURITY.md](docs/SECURITY.md).
-2. **Бизнес-логика живёт в `src/modules/`.** Страницы и API-маршруты не ходят
-   в базу напрямую. Подробности — [docs/STRUCTURE.md](docs/STRUCTURE.md).
+2. **Business logic lives in `src/modules/`.** Pages and API routes never touch
+   the database directly. Details: [docs/STRUCTURE.md](docs/STRUCTURE.md).

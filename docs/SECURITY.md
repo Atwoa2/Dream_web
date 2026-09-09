@@ -1,90 +1,93 @@
-# Безопасность
+# Security
 
-## Секреты: главное правило
+## Secrets: the main rule
 
-**Ни один секрет никогда не попадает в git.**
+**No secret ever reaches git.**
 
-В репозитории лежит только `.env.example` — список имён переменных без значений.
+The repository contains only `.env.example` — variable names without values.
 
-| Где | Что там лежит | Кто имеет доступ |
+| Where | What lives there | Who has access |
 |---|---|---|
-| `.env.local` на машине разработчика | test-ключи, локальная база | сам разработчик |
-| Общий менеджер паролей (1Password / Bitwarden) | test-ключи команды, доступы к сервисам | вся команда разработки |
-| Vercel Environment Variables (Production) | `sk_live_`, боевая база, боевые вебхуки | 1–2 человека |
+| `.env.local` on a developer machine | test keys, local database | that developer |
+| Team password manager (1Password / Bitwarden) | shared test keys, service logins | the dev team |
+| Vercel Environment Variables (Production) | `sk_live_`, production DB, production webhooks | 1–2 people |
 
-Боевые ключи разработчикам **не выдаются вообще**. Не «выдаются осторожно» —
-не выдаются. Разработка ведётся на test-ключах Stripe, где деньги ненастоящие.
+Production keys are **not handed to developers at all**. Not "handed out
+carefully" — not handed out. Development runs on Stripe test keys, where the
+money is not real.
 
-Защита от ошибки встроена в код: `lib/env.ts` падает при старте, если ключ
-`sk_live_` обнаружен вне production.
+The mistake is guarded against in code: `lib/env.ts` fails at startup if an
+`sk_live_` key is detected outside production.
 
-В CI работает **gitleaks** — он блокирует pull request, если в изменениях
-найден похожий на секрет текст. Это дешёвая страховка от самой дорогой ошибки.
+CI runs **gitleaks** — it blocks a pull request when the diff contains
+something that looks like a secret. Cheap insurance against the most expensive
+mistake.
 
-## Если секрет всё-таки утёк
+## If a secret does leak
 
-Порядок действий, именно в этом порядке:
+In exactly this order:
 
-1. **Отозвать ключ** в панели сервиса (Stripe → Roll key). Это первое: пока
-   ключ действителен, всё остальное не имеет значения.
-2. Выпустить новый и обновить переменные окружения.
-3. Только потом чистить git-историю.
+1. **Revoke the key** in the service dashboard (Stripe → Roll key). This comes
+   first: while the key is valid, nothing else matters.
+2. Issue a new one and update the environment variables.
+3. Only then clean up git history.
 
-Удалить коммит недостаточно — ключ уже проиндексирован ботами, которые
-сканируют GitHub в реальном времени. Утёкшие ключи Stripe используют за минуты.
+Deleting the commit is not enough — bots index GitHub in real time, and leaked
+Stripe keys are exploited within minutes.
 
-## Аутентификация
+## Authentication
 
-- Паролей нет: вход по одноразовому коду или через Google. Красть нечего.
-- Код — `crypto.randomInt`, не `Math.random`.
-- В базе лежит **хэш** кода, не сам код.
-- Не более 5 попыток ввода, иначе 6 цифр подбираются перебором за минуты.
-- Rate limit на запрос кода: по email и по IP. Без него чужой ящик заваливают
-  письмами, а вам приходит счёт за отправку.
-- Ответы «код неверный» и «код истёк» неразличимы — иначе по ним определяют,
-  зарегистрирован ли email.
+- No passwords: sign-in via one-time code or Google. Nothing to steal.
+- Codes come from `crypto.randomInt`, never `Math.random`.
+- The database stores a **hash** of the code, not the code.
+- At most 5 verification attempts; otherwise 6 digits fall to brute force in
+  minutes.
+- Rate limit on code requests: per email AND per IP. Without it, a stranger's
+  inbox gets flooded and the email bill is yours.
+- "Wrong code" and "expired code" responses are indistinguishable — otherwise
+  they reveal whether an email is registered.
 
-## Сессии
+## Sessions
 
-- Кука `httpOnly` + `Secure` + `SameSite=Lax`: JavaScript до неё не дотянется,
-  значит XSS не крадёт сессию.
-- Токен в БД хранится хэшем.
-- CSRF-защита на всех изменяющих запросах.
+- Cookie is `httpOnly` + `Secure` + `SameSite=Lax`: JavaScript cannot reach
+  it, so XSS cannot steal the session.
+- The session token is stored in the DB as a hash.
+- CSRF protection on every mutating request.
 
-## API-ключи пользователей
+## User API keys
 
-- Показываются **один раз** при создании.
-- В базе только SHA-256 хэш и префикс для отображения.
-- Потерянный ключ не восстанавливается — выпускается новый.
-- Отзыв мгновенный, через `revoked_at`.
+- Shown **once**, at creation time.
+- The DB stores only a SHA-256 hash and a display prefix.
+- A lost key is not recoverable — a new one is issued.
+- Revocation is instant, via `revoked_at`.
 
-## Разграничение доступа к данным
+## Data access boundaries
 
-Самая частая уязвимость в подобных проектах — забытый фильтр по `user_id` в
-одном эндпоинте, после чего любой пользователь видит чужие платежи.
+The most common vulnerability in this kind of product is a forgotten
+`user_id` filter in a single endpoint, after which any user can read someone
+else's payments.
 
-Поэтому:
+Therefore:
 
-- Любой запрос к данным пользователя фильтруется по `user_id` из сессии.
-- Идентификатор объекта из URL **никогда** не считается достаточным основанием
-  для доступа: `/api/keys/<id>` обязан проверить, что ключ принадлежит текущему
-  пользователю.
-- Это отдельный пункт при code review.
+- Every query for user data is filtered by the `user_id` from the session.
+- An object ID from the URL is **never** sufficient grounds for access:
+  `/api/keys/<id>` must verify the key belongs to the current user.
+- This is an explicit code review checklist item.
 
 ## Stripe
 
-- Подпись вебхука проверяется по **сырому** телу запроса.
-- Обработка идемпотентна: `stripe_event_id` в `processed_events`.
-- Данные карт не хранятся — только `brand` и `last4` для отображения.
-- Доступ к продукту выдаётся только по вебхуку, не по `success_url`.
-- Роль разработчиков в Stripe Dashboard — `Developer`: видят ключи и логи, но
-  не могут трогать выплаты и банковские реквизиты.
+- Webhook signatures are verified against the **raw** request body.
+- Processing is idempotent: `stripe_event_id` goes into `processed_events`.
+- Card data is never stored — only `brand` and `last4` for display.
+- Product access is granted only by webhook, not by `success_url`.
+- Developers get the `Developer` role in the Stripe Dashboard: keys and logs,
+  but no payouts or bank details.
 
-## Инфраструктура
+## Infrastructure
 
-- HTTPS везде, HSTS включён.
-- Security headers настроены в `next.config.ts`.
-- Валидация входных данных через zod на границе приложения.
-- Запросы к БД только параметризованные (Drizzle) — SQL-инъекции закрыты.
-- Обязательная 2FA в GitHub и Stripe для всех участников.
-- Регулярные бэкапы базы с проверкой восстановления.
+- HTTPS everywhere, HSTS enabled.
+- Security headers configured in `next.config.ts`.
+- Input validation with zod at the application boundary.
+- Parameterized queries only (Drizzle) — SQL injection is closed off.
+- Mandatory 2FA on GitHub and Stripe for every member.
+- Regular database backups with restore drills.

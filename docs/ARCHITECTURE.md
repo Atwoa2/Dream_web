@@ -1,97 +1,100 @@
-# Архитектура
+# Architecture
 
-## Что строим
+## What we are building
 
-Веб-платформа DreamLabs: личный кабинет, оплата через Stripe и доступ к
-собственной модели по API.
+The DreamLabs web platform: user account area, Stripe payments, and API access
+to our own model.
 
-## Сервисы
+## Services
 
 ```
                     ┌─────────────────────┐
-   браузер ────────►│  Next.js (Vercel)   │  сайт, кабинет, биллинг,
-                    │                     │  выдача API-ключей
+   browser ────────►│  Next.js (Vercel)   │  site, account area, billing,
+                    │                     │  API key management
                     └──────────┬──────────┘
                                │
                     ┌──────────▼──────────┐
-                    │   PostgreSQL        │ ◄──── общая база
+                    │   PostgreSQL        │ ◄──── shared database
                     └──────────▲──────────┘
                                │
-   клиент по API ─────►┌───────┴──────────┐
-   (X-API-Key)         │  API-шлюз (GPU)  │  проверяет ключ,
-                       │  наша модель     │  пишет расход
+   API client ────────►┌───────┴──────────┐
+   (X-API-Key)         │  API gateway     │  validates keys,
+                       │  (GPU, our model)│  records usage
                        └──────────────────┘
 ```
 
-Два сервиса, одна база. Сайт пишет ключи и лимиты, шлюз их читает и записывает
-расход. Модель живёт отдельно: Next.js на Vercel — не место для GPU.
+Two services, one database. The site writes keys and limits; the gateway reads
+them and records usage. The model runs elsewhere: Next.js on Vercel is no
+place for a GPU.
 
-## Технологии
+## Technology
 
-| Что | Чем | Почему |
+| What | With | Why |
 |---|---|---|
-| Фронтенд и бэкенд | Next.js 15 (App Router), TypeScript | один проект и один деплой вместо двух связанных сервисов |
-| База | PostgreSQL + Drizzle ORM | типобезопасные запросы, миграции в git |
-| Аутентификация | Auth.js v5 | Google из коробки, self-hosted, без vendor lock-in |
-| Почта | Resend | письма с кодом подтверждения |
-| Платежи | Stripe Checkout + Billing Portal | карты не касаются наших серверов |
-| Лимиты | Upstash Redis | rate limiting |
-| Хостинг | Vercel | preview-деплой на каждый PR |
+| Frontend + backend | Next.js 15 (App Router), TypeScript | one project and one deploy instead of two coupled services |
+| Database | PostgreSQL + Drizzle ORM | type-safe queries, migrations in git |
+| Authentication | hand-rolled: email codes + Google OAuth (plain fetch), sessions in the DB | full control over our schema, no extra dependencies; passwords do not exist in the system |
+| Email | Resend | verification code delivery |
+| Payments | Stripe Checkout + Billing Portal | card data never touches our servers |
+| Rate limiting | PostgreSQL counters | no extra service to operate; swappable for Redis behind the same interface |
+| Hosting | Vercel | preview deploy on every PR |
 
-## Аутентификация
+## Authentication
 
-Два способа входа, оба ведут в один аккаунт при совпадении email:
+Two sign-in methods; both resolve to the same account when the email matches:
 
-1. **Код на почту** — 6 цифр, 10 минут, одноразовый.
-2. **Google OAuth**.
+1. **Email code** — 6 digits, 10-minute lifetime, single use.
+2. **Google OAuth** — authorization code flow.
 
-Паролей в системе нет вообще. Нечего красть, не нужны сброс пароля и защита от
-подстановки утёкших баз.
+There are no passwords in the system at all: nothing to steal, no reset flow,
+no credential-stuffing surface.
 
-## Биллинг
+## Billing
 
-**Правило первое:** источник правды о доступе — наша база, обновляемая
-вебхуками. Страницы не спрашивают Stripe API при отрисовке.
+**Rule one:** the source of truth for access is OUR database, kept up to date
+by webhooks. Pages never call the Stripe API to render.
 
-**Правило второе:** доступ выдаёт только вебхук, никогда не `success_url`.
+**Rule two:** access is granted only by a webhook, never by `success_url`.
 
-Поток оплаты:
+Payment flow:
 
 ```
-браузер           наш сервер              Stripe
-   │ «Оплатить»       │                      │
-   ├─────────────────►│                      │
-   │                  ├─ создать session ───►│
-   │                  │◄──── url ────────────┤
-   │◄─── редирект ────┤                      │
-   ├──────── оплата на стороне Stripe ──────►│
-   │◄─── возврат на success_url ─────────────┤
-   │                  │◄── вебхук ───────────┤
-   │                  ├─ выдать доступ       │
+browser            our server               Stripe
+   │ "Pay"             │                      │
+   ├──────────────────►│                      │
+   │                   ├─ create session ────►│
+   │                   │◄──── url ────────────┤
+   │◄─── redirect ─────┤                      │
+   ├──────── payment happens on Stripe ──────►│
+   │◄─── back to success_url ─────────────────┤
+   │                   │◄── webhook ──────────┤
+   │                   ├─ grant access        │
 ```
 
-Вкладка Billing показывает: текущий тариф, историю платежей, карту
-(`Visa •••• 4242`), кнопку «Управление» → Billing Portal Stripe. Смена карты,
-отмена и апгрейд делаются на стороне Stripe, свой UI под это не пишем.
+The Billing tab shows: current plan, payment history, card
+(`Visa •••• 4242`), and a "Manage" button → Stripe Billing Portal. Card
+changes, cancellation and upgrades happen on Stripe's side — we do not build
+that UI.
 
-Оплата API — предоплаченные кредиты, не постоплата: иначе клиент может
-нагенерить счёт на тысячи долларов и не заплатить, а GPU-время уже потрачено.
+API usage is paid with prepaid credits, not postpaid metering: otherwise a
+client can run up a huge bill and never pay, while the GPU time is already
+spent.
 
-## Этапы
+## Stages
 
-| Этап | Содержание | Состояние |
+| Stage | Scope | Status |
 |---|---|---|
-| **0** | репозиторий, скелет, схема БД, CI, документация | готово |
-| **1** | вход по коду и через Google, сессии, rate limiting | |
-| **2** | личный кабинет: профиль, навигация | |
-| **3** | Stripe: оплата, подписка, вкладка Billing, вебхуки | |
-| **4** | API-ключи, шлюз, учёт расхода, кредиты | |
+| **0** | repository, skeleton, DB schema, CI, documentation | done |
+| **1** | email-code and Google sign-in, sessions, rate limiting | in progress |
+| **2** | account area: profile, navigation | |
+| **3** | Stripe: payments, subscription, Billing tab, webhooks | |
+| **4** | API keys, gateway, usage metering, credits | |
 
-Stripe идёт после кабинета не потому что сложный, а потому что ему нужен
-пользователь, к которому привязывается Customer.
+Stripe comes after the account area not because it is hard, but because it
+needs a user to attach the Customer to.
 
-## Смежные документы
+## Related documents
 
-- [STRUCTURE.md](STRUCTURE.md) — где какой код лежит и почему
-- [SECURITY.md](SECURITY.md) — работа с секретами и требования безопасности
-- [WORKFLOW.md](WORKFLOW.md) — как команда работает с репозиторием
+- [STRUCTURE.md](STRUCTURE.md) — where code lives and why
+- [SECURITY.md](SECURITY.md) — secrets handling and security requirements
+- [WORKFLOW.md](WORKFLOW.md) — how the team works with this repository

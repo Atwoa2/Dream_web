@@ -1,8 +1,8 @@
 /**
- * Типизированные ошибки приложения.
+ * Typed application errors.
  *
- * Правило: наружу пользователю уходит только `message` и `code`. Никаких
- * стек-трейсов, SQL-запросов и внутренних деталей — это подсказки для атакующего.
+ * Rule: only `message` and `code` ever reach the user. No stack traces, SQL
+ * queries or internal details — those are hints for an attacker.
  */
 
 export type ErrorCode =
@@ -38,8 +38,8 @@ export class AppError extends Error {
   }
 }
 
-export const unauthorized = (m = "Требуется вход") => new AppError("UNAUTHORIZED", m);
-export const forbidden = (m = "Нет доступа") => new AppError("FORBIDDEN", m);
-export const notFound = (m = "Не найдено") => new AppError("NOT_FOUND", m);
+export const unauthorized = (m = "Sign-in required") => new AppError("UNAUTHORIZED", m);
+export const forbidden = (m = "Access denied") => new AppError("FORBIDDEN", m);
+export const notFound = (m = "Not found") => new AppError("NOT_FOUND", m);
 export const validation = (m: string) => new AppError("VALIDATION", m);
-export const rateLimited = (m = "Слишком много запросов") => new AppError("RATE_LIMITED", m);
+export const rateLimited = (m = "Too many requests") => new AppError("RATE_LIMITED", m);

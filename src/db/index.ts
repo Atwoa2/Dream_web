@@ -4,11 +4,11 @@ import { env } from "@/lib/env";
 import * as schema from "./schema";
 
 /**
- * Подключение к PostgreSQL.
+ * PostgreSQL connection.
  *
- * В разработке Next.js перезагружает модули на каждое изменение файла, из-за
- * чего без кэширования на globalThis плодятся десятки соединений, и база
- * упирается в лимит. В проде создаётся одно соединение на инстанс.
+ * In development Next.js reloads modules on every file change; without
+ * caching on globalThis this spawns dozens of connections until the database
+ * hits its limit. In production one pool per instance is created.
  */
 const globalForDb = globalThis as unknown as {
   connection: ReturnType<typeof postgres> | undefined;

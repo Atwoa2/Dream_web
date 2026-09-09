@@ -1,35 +1,36 @@
-# api-keys — этап 4
+# api-keys — stage 4
 
-Доступ к нашей модели по API: выпуск ключей, учёт расхода, списание кредитов.
+Model access over API: key issuance, usage metering, credit deduction.
 
-## Как устроен ключ
+## Key anatomy
 
-Формат `dl_live_<32 байта энтропии в base62>`.
+Format: `dl_live_<32 bytes of entropy, base62>`.
 
-- Показывается пользователю **один раз** при создании.
-- В базе только SHA-256 хэш и префикс для отображения.
-- Потерянный ключ не восстанавливается — выпускается новый.
-- Отзыв мгновенный, через `revoked_at` (не удалением: история должна остаться).
+- Shown to the user **once**, at creation.
+- The DB stores only a SHA-256 hash and a display prefix.
+- A lost key is not recovered — a new one is issued.
+- Revocation is instant, via `revoked_at` (not deletion: history must survive).
 
-## Планируемый интерфейс
+## Planned interface
 
 ```ts
-createKey(userId, name): Promise<{ key: string; id: string }>  // key только здесь
+createKey(userId, name): Promise<{ key: string; id: string }>  // key appears here only
 listKeys(userId): Promise<ApiKeyInfo[]>
 revokeKey(userId, keyId): Promise<void>
-authenticateKey(rawKey): Promise<{ userId; keyId } | null>     // для шлюза
+authenticateKey(rawKey): Promise<{ userId; keyId } | null>     // for the gateway
 recordUsage(keyId, usage): Promise<void>
 ```
 
-## Модель оплаты
+## Payment model
 
-Предоплаченные кредиты. Вызов списывает с баланса, баланс кончился — `402`.
+Prepaid credits. A call deducts from the balance; an empty balance returns
+`402`.
 
-Постоплату не используем: клиент может нагенерить счёт на тысячи долларов и не
-заплатить, а GPU-время уже потрачено.
+Postpaid metering is not used: a client could run up a bill worth thousands
+and never pay, while the GPU time is already spent.
 
-## Замечание по архитектуре
+## Architecture note
 
-Сама модель работает **не здесь** — Next.js на Vercel не место для GPU.
-Это отдельный сервис-шлюз, который смотрит в ту же базу: читает ключи и
-лимиты, пишет `usage_events`.
+The model itself does **not** run here — Next.js on Vercel is no place for a
+GPU. It is a separate gateway service that reads the same database: keys and
+limits in, `usage_events` out.

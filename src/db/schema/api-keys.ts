@@ -1,8 +1,8 @@
 /**
- * API-ключи пользователей и учёт расхода.
+ * User API keys and usage metering.
  *
- * Используется этапом 4 (доступ к модели по API). Схема заложена сразу,
- * чтобы потом не переделывать структуру таблиц на живой базе.
+ * Used by stage 4 (model access over API). The schema is laid down now so the
+ * table structure never has to change on a live database.
  */
 import {
   pgTable,
@@ -16,10 +16,9 @@ import {
 import { users } from "./users";
 
 /**
- * Ключ выдаётся пользователю ОДИН раз при создании и больше нигде не
- * показывается. В базе — только SHA-256 хэш и префикс для отображения
- * в интерфейсе (`dl_live_a1b2…`). Потерянный ключ не восстанавливается,
- * вместо него выпускается новый.
+ * A key is shown to the user ONCE at creation and never again. The DB keeps
+ * only a SHA-256 hash and a display prefix (`dl_live_a1b2…`). A lost key is
+ * not recovered — a new one is issued instead.
  */
 export const apiKeys = pgTable(
   "api_keys",
@@ -29,12 +28,12 @@ export const apiKeys = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     keyHash: text("key_hash").notNull(),
-    /** Первые символы ключа — чтобы пользователь узнал его в списке. */
+    /** Leading characters of the key — so the user recognizes it in a list. */
     keyPrefix: text("key_prefix").notNull(),
-    /** Человекочитаемое имя: «продакшен», «тесты», «ноутбук Пети». */
+    /** Human-readable name: "production", "tests", "Pete's laptop". */
     name: text("name").notNull(),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-    /** Отзыв вместо удаления — история вызовов должна остаться. */
+    /** Revocation instead of deletion — call history must survive. */
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -44,7 +43,7 @@ export const apiKeys = pgTable(
   ],
 );
 
-/** Один вызов API = одна строка. Основа для списания кредитов и статистики. */
+/** One API call = one row. The basis for credit deduction and statistics. */
 export const usageEvents = pgTable(
   "usage_events",
   {
@@ -58,7 +57,7 @@ export const usageEvents = pgTable(
     model: text("model").notNull(),
     tokensIn: integer("tokens_in").notNull().default(0),
     tokensOut: integer("tokens_out").notNull().default(0),
-    /** Списанная стоимость в центах. */
+    /** Deducted cost in cents. */
     costCents: integer("cost_cents").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

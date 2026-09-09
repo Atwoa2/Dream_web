@@ -7,7 +7,7 @@ on:
 
 jobs:
   quality:
-    name: Типы, линтер, сборка
+    name: Types, lint, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,23 +19,23 @@ jobs:
 
       - run: npm ci
 
-      - name: Проверка типов
+      - name: Type check
         run: npm run typecheck
 
-      - name: Линтер
+      - name: Lint
         run: npm run lint
 
-      - name: Сборка
+      - name: Build
         run: npm run build
         env:
-          # Значения-заглушки: сборке нужны валидные переменные, но настоящие
-          # секреты в CI не передаются.
+          # Placeholder values: the build needs valid variables, but real
+          # secrets are never passed to CI.
           APP_URL: http://localhost:3000
           APP_ENV: development
           DATABASE_URL: postgresql://user:pass@localhost:5432/db
 
   secrets:
-    name: Поиск утёкших секретов
+    name: Leaked secrets scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

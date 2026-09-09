@@ -1,45 +1,45 @@
-# Модули — вся бизнес-логика живёт здесь
+# Modules — all business logic lives here
 
-## Правило слоёв
+## The layer rule
 
 ```
 app/  →  modules/  →  db/
 ```
 
-Стрелка работает **только слева направо**:
+The arrow works **left to right only**:
 
-- `app/` (страницы и API-маршруты) — принимает запрос, проверяет права,
-  вызывает модуль, возвращает ответ. Логики внутри нет.
-- `modules/` — бизнес-логика. Ничего не знает про HTTP, `Request`, `Response`
-  и cookies.
-- `db/` — только схема и подключение. Запросов здесь нет.
+- `app/` (pages and API routes) — accepts the request, checks permissions,
+  calls a module, returns the response. No logic inside.
+- `modules/` — business logic. Knows nothing about HTTP, `Request`,
+  `Response` or cookies.
+- `db/` — schema and connection only. No queries here.
 
-**Запрещено:** обращаться к `db` напрямую из `app/`. Если страница делает
-`db.select(...)` — логика расползается по маршрутам, и через месяц никто не
-находит, где считается доступ пользователя. Это и есть тот хаос, которого
-избегаем.
+**Forbidden:** touching `db` directly from `app/`. Once a page runs
+`db.select(...)`, logic spreads across routes and within a month nobody can
+find where user access is decided. That is exactly the chaos we are avoiding.
 
-## Устройство модуля
+## Module layout
 
-Каждый модуль — одна предметная область. Внутри всегда одни и те же файлы:
+Each module is one domain. The files are always the same:
 
-| Файл | Отвечает за |
+| File | Responsibility |
 |---|---|
-| `README.md` | зачем модуль нужен, границы ответственности |
-| `types.ts` | типы, которые модуль отдаёт наружу |
-| `repository.ts` | запросы к БД — **единственное место**, где есть SQL |
-| `service.ts` | бизнес-правила; вызывает repository, наружу отдаёт типы |
-| `index.ts` | публичный интерфейс: что модуль экспортирует |
+| `README.md` | why the module exists, responsibility boundaries |
+| `types.ts` | types the module exposes |
+| `repository.ts` | DB queries — **the only place** with SQL |
+| `service.ts` | business rules; calls the repository, returns public types |
+| `index.ts` | public interface: what the module exports |
 
-Импортировать чужой модуль можно **только через его `index.ts`**. Лезть в
-`other-module/repository.ts` напрямую нельзя — иначе граница ответственности
-исчезает, и модуль невозможно поменять, не сломав половину проекта.
+Import another module **only through its `index.ts`**. Reaching into
+`other-module/repository.ts` directly erases the responsibility boundary and
+makes the module impossible to change without breaking half the project.
 
-## Текущие модули
+## Current modules
 
-| Модуль | Этап | Состояние |
+| Module | Stage | State |
 |---|---|---|
-| `users` | 0 | базовый CRUD готов |
-| `auth` | 1 | вход по коду и через Google |
-| `billing` | 3 | Stripe: подписки, платежи, портал |
-| `api-keys` | 4 | ключи, учёт расхода, списание кредитов |
+| `users` | 0 | basic CRUD ready |
+| `auth` | 1 | email-code and Google sign-in |
+| `rate-limit` | 1 | action rate limiting |
+| `billing` | 3 | Stripe: subscriptions, payments, portal |
+| `api-keys` | 4 | keys, usage metering, credit deduction |
