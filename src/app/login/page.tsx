@@ -50,12 +50,13 @@ export default function LoginPage() {
     }
   }, []);
 
-  // Tick the resend countdown once a second.
+  // Tick the resend countdown once a second while it is active.
+  const cooldownActive = cooldown > 0;
   useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = setInterval(() => setCooldown((s) => s - 1), 1000);
+    if (!cooldownActive) return;
+    const timer = setInterval(() => setCooldown((s) => (s > 0 ? s - 1 : 0)), 1000);
     return () => clearInterval(timer);
-  }, [cooldown > 0]);
+  }, [cooldownActive]);
 
   async function post(path: string, body: unknown): Promise<boolean> {
     setBusy(true);
