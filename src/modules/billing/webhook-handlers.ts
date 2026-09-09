@@ -71,6 +71,38 @@ function cardOf(pm: unknown): { brand: string; last4: string } | null {
   return card?.brand && card.last4 ? { brand: card.brand, last4: card.last4 } : null;
 }
 
+/**
+ * Reliable card display: at checkout.session.completed a subscription's
+ * default_payment_method is often still null, so we ask the customer for its
+ * default card as a fallback. Best-effort — a missing card just leaves the
+ * "no card on file" state, never breaks the webhook.
+ */
+async function saveCardFor(
+  userId: string,
+  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
+  primary: unknown,
+): Promise<void> {
+  let card = cardOf(primary);
+
+  if (!card) {
+    const id = customerId(customer);
+    if (id) {
+      try {
+        const pms = await stripe().paymentMethods.list({
+          customer: id,
+          type: "card",
+          limit: 1,
+        });
+        card = cardOf(pms.data[0]);
+      } catch {
+        // ignore — card display is optional
+      }
+    }
+  }
+
+  if (card) await saveCardDisplay(userId, card.brand, card.last4);
+}
+
 // --- event handlers ---------------------------------------------------------
 
 async function onCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
@@ -87,8 +119,7 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session): Promise<vo
 
   if (full.mode === "subscription" && full.subscription && typeof full.subscription !== "string") {
     await upsertFromStripeSubscription(full.subscription);
-    const card = cardOf(full.subscription.default_payment_method);
-    if (card) await saveCardDisplay(userId, card.brand, card.last4);
+    await saveCardFor(userId, full.customer, full.subscription.default_payment_method);
     // The cycle's payment row comes from invoice.paid — not recorded here,
     // otherwise every first charge would appear twice.
     return;
@@ -108,8 +139,7 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session): Promise<vo
     if (session.metadata?.product === "credits") {
       await repo.addCredits(userId, full.amount_total ?? intent.amount);
     }
-    const card = cardOf(intent.payment_method);
-    if (card) await saveCardDisplay(userId, card.brand, card.last4);
+    await saveCardFor(userId, full.customer, intent.payment_method);
   }
 }
 
