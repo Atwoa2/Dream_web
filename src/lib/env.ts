@@ -12,11 +12,10 @@ import { z } from "zod";
  */
 const schema = z.object({
   // --- application ---
-  APP_URL: z.string().url(),
+  // Optional because Vercel preview deployments get a fresh URL every time;
+  // it is derived from VERCEL_URL below when not set explicitly.
+  APP_URL: z.string().url().optional(),
   APP_ENV: z.enum(["development", "preview", "production"]).default("development"),
-
-  // --- database ---
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
   // --- authentication (stage 1) ---
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters").optional(),
@@ -33,6 +32,10 @@ const schema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRICE_SUBSCRIPTION: z.string().optional(),
   STRIPE_PRICE_CREDITS_PACK: z.string().optional(),
+
+  // --- Firebase (data store) ---
+  // Base64-encoded service-account JSON. Server-side only.
+  FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
 
   // --- robot backend proxy ---
   DREAM_API_URL: z.string().url().optional(),
@@ -51,7 +54,20 @@ if (!parsed.success) {
   );
 }
 
-export const env = parsed.data;
+/**
+ * APP_URL resolution: explicit value first (local dev, production), then the
+ * deployment's own URL that Vercel injects (previews get a fresh one per
+ * deploy). Missing both is a configuration error.
+ */
+const appUrl =
+  parsed.data.APP_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
+
+if (!appUrl) {
+  throw new Error("APP_URL is not set and VERCEL_URL is unavailable — set APP_URL");
+}
+
+export const env = { ...parsed.data, APP_URL: appUrl };
 
 /**
  * Disaster guard: a live Stripe key outside production means someone copied

@@ -3,7 +3,7 @@
 ## The layer rule
 
 ```
-app/  →  modules/  →  db/
+app/  →  modules/  →  FirebaseStore
 ```
 
 The arrow works **left to right only**:
@@ -12,10 +12,11 @@ The arrow works **left to right only**:
   calls a module, returns the response. No logic inside.
 - `modules/` — business logic. Knows nothing about HTTP, `Request`,
   `Response` or cookies.
-- `db/` — schema and connection only. No queries here.
+- `lib/firebase-store.ts` — the FirebaseStore class: every read and write
+  goes through it. Repositories are its only callers.
 
-**Forbidden:** touching `db` directly from `app/`. Once a page runs
-`db.select(...)`, logic spreads across routes and within a month nobody can
+**Forbidden:** touching the store directly from `app/`. Once a page queries
+Firestore itself, logic spreads across routes and within a month nobody can
 find where user access is decided. That is exactly the chaos we are avoiding.
 
 ## Module layout
@@ -26,7 +27,7 @@ Each module is one domain. The files are always the same:
 |---|---|
 | `README.md` | why the module exists, responsibility boundaries |
 | `types.ts` | types the module exposes |
-| `repository.ts` | DB queries — **the only place** with SQL |
+| `repository.ts` | data access — **the only place** that touches FirebaseStore |
 | `service.ts` | business rules; calls the repository, returns public types |
 | `index.ts` | public interface: what the module exports |
 

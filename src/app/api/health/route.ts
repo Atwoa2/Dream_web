@@ -1,23 +1,23 @@
 import { NextResponse } from "next/server";
-import { sql } from "drizzle-orm";
-import { db } from "@/db";
+import { firestore } from "@/lib/firebase";
 import { logger } from "@/lib/logger";
 
 /**
- * Liveness check: does the app respond and is the database reachable.
+ * Liveness check: does the app respond and is the data store reachable.
  * Used by monitoring and during deploys.
  *
- * Only "ok / degraded" leaves the server — a DB error message contains host
- * and user names and must not appear on a public endpoint.
+ * Only "ok / degraded" leaves the server — error details can contain
+ * project identifiers and must not appear on a public endpoint.
  */
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    await db.execute(sql`select 1`);
+    // A read of a known-missing doc is the cheapest authenticated round trip.
+    await firestore().collection("health").doc("ping").get();
     return NextResponse.json({ status: "ok", database: "up" });
   } catch (error) {
-    logger.error("healthcheck: database unreachable", {
+    logger.error("healthcheck: data store unreachable", {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json({ status: "degraded", database: "down" }, { status: 503 });

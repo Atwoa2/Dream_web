@@ -14,7 +14,7 @@ to our own model.
                     └──────────┬──────────┘
                                │
                     ┌──────────▼──────────┐
-                    │   PostgreSQL        │ ◄──── shared database
+                    │  Firestore          │ ◄──── shared data store
                     └──────────▲──────────┘
                                │
    API client ────────►┌───────┴──────────┐
@@ -32,7 +32,7 @@ place for a GPU.
 | What | With | Why |
 |---|---|---|
 | Frontend + backend | Next.js 15 (App Router), TypeScript | one project and one deploy instead of two coupled services |
-| Database | PostgreSQL + Drizzle ORM | type-safe queries, migrations in git |
+| Data store | Firebase Firestore (Admin SDK, server-only) | managed NoSQL; doc-IDs as unique keys, transactions for money, atomic increments |
 | Authentication | hand-rolled: email codes + Google OAuth (plain fetch), sessions in the DB | full control over our schema, no extra dependencies; passwords do not exist in the system |
 | Email | Resend | verification code delivery |
 | Payments | Stripe Checkout + Billing Portal | card data never touches our servers |
