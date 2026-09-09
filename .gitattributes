@@ -1,0 +1,10 @@
+# В репозитории всегда LF. Иначе на Windows и macOS файлы разъезжаются,
+# и в diff попадает весь файл вместо реальных изменений.
+* text=auto eol=lf
+
+# Бинарные файлы не трогаем.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.pdf binary
