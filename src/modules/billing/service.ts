@@ -87,7 +87,7 @@ export async function getCreditsBalance(userId: string): Promise<number> {
 
 export async function getPaymentMethod(userId: string): Promise<PaymentMethodDisplay | null> {
   const user = await getUser(userId);
-  if (!user.cardBrand || !user.cardLast4) return null;
+  if (!user.cardBrand) return null;
   return { brand: user.cardBrand, last4: user.cardLast4 };
 }
 

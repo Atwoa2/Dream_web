@@ -68,15 +68,15 @@ export default async function BillingPage() {
         <h2>Payment method</h2>
         {card ? (
           <div className="row">
-            <span className="muted">Card</span>
+            <span className="muted">{card.last4 ? "Card" : "Wallet"}</span>
             <span style={{ textTransform: "capitalize" }}>
-              {card.brand} •••• {card.last4}
+              {card.last4 ? `${card.brand} •••• ${card.last4}` : card.brand}
             </span>
           </div>
         ) : (
           <p className="muted" style={{ margin: 0 }}>
-            No card on file. It is saved during your first checkout and managed
-            in the billing portal.
+            No payment method on file. It is saved during your first checkout
+            and managed in the billing portal.
           </p>
         )}
       </section>

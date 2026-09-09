@@ -21,5 +21,6 @@ export type Payment = {
 
 export type PaymentMethodDisplay = {
   brand: string;
-  last4: string;
+  /** null for wallets (Link, PayPal) that expose no digits. */
+  last4: string | null;
 };

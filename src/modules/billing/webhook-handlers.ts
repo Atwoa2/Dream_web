@@ -65,42 +65,53 @@ async function upsertFromStripeSubscription(
   });
 }
 
-/** Pulls brand/last4 out of an expanded payment method, if it is a card. */
-function cardOf(pm: unknown): { brand: string; last4: string } | null {
-  const card = (pm as { card?: { brand?: string; last4?: string } } | null)?.card;
-  return card?.brand && card.last4 ? { brand: card.brand, last4: card.last4 } : null;
+/**
+ * Display info for a payment method. Cards give brand + last4; wallets like
+ * Link or PayPal expose no digits, so only the wallet name is stored
+ * (last4 = null) and the UI renders it as "Link".
+ */
+function displayOf(pm: unknown): { brand: string; last4: string | null } | null {
+  const method = pm as {
+    type?: string;
+    card?: { brand?: string; last4?: string };
+  } | null;
+  if (!method || typeof method !== "object") return null;
+
+  if (method.card?.brand && method.card.last4) {
+    return { brand: method.card.brand, last4: method.card.last4 };
+  }
+  if (method.type) return { brand: method.type, last4: null };
+  return null;
 }
 
 /**
- * Reliable card display: at checkout.session.completed a subscription's
- * default_payment_method is often still null, so we ask the customer for its
- * default card as a fallback. Best-effort — a missing card just leaves the
- * "no card on file" state, never breaks the webhook.
+ * Reliable payment-method display: at checkout.session.completed a
+ * subscription's default_payment_method is often still null, so we fall back
+ * to the customer's saved methods. Best-effort — nothing found just leaves
+ * the "no payment method" state, never breaks the webhook.
  */
 async function saveCardFor(
   userId: string,
   customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
   primary: unknown,
 ): Promise<void> {
-  let card = cardOf(primary);
+  let display = displayOf(primary);
 
-  if (!card) {
+  if (!display) {
     const id = customerId(customer);
     if (id) {
       try {
-        const pms = await stripe().paymentMethods.list({
-          customer: id,
-          type: "card",
-          limit: 1,
-        });
-        card = cardOf(pms.data[0]);
+        // No type filter: the saved method may be a card, Link, or another
+        // wallet — take whatever the customer actually pays with.
+        const pms = await stripe().paymentMethods.list({ customer: id, limit: 1 });
+        display = displayOf(pms.data[0]);
       } catch {
-        // ignore — card display is optional
+        // ignore — payment method display is optional
       }
     }
   }
 
-  if (card) await saveCardDisplay(userId, card.brand, card.last4);
+  if (display) await saveCardDisplay(userId, display.brand, display.last4);
 }
 
 // --- event handlers ---------------------------------------------------------
