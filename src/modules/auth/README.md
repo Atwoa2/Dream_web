@@ -1,32 +1,56 @@
-# auth — этап 1
+# auth — stage 1
 
-Вход в систему. Кода пока нет, здесь зафиксирован контракт, чтобы тот, кто
-возьмёт этап 1, не изобретал структуру заново.
+Signing in. Two methods, both resolving to one account when the email matches:
 
-## Способы входа
+1. **Email code** — 6 digits, 10-minute lifetime, single use.
+2. **Google OAuth** — authorization code flow, hand-rolled on fetch
+   (three HTTPS requests; no library dictating our session or table format).
 
-1. **Код на email** — 6 цифр, живёт 10 минут, одноразовый.
-2. **Google OAuth** — через Auth.js.
+There are no passwords in the system: nothing to leak, no reset flow, no
+complexity policies.
 
-Паролей в системе нет вообще: нечего утекать, не нужны сброс и политики сложности.
-
-## Планируемый интерфейс
+## Interface
 
 ```ts
-requestEmailCode(email: string, ip: string): Promise<void>
-verifyEmailCode(email: string, code: string): Promise<Session>
-signInWithGoogle(profile: GoogleProfile): Promise<Session>
-getCurrentUser(): Promise<User | null>
-signOut(sessionId: string): Promise<void>
+requestEmailCode(email, meta): Promise<void>
+verifyEmailCode(email, code, meta): Promise<IssuedSession>
+signInWithGoogle(profile, meta): Promise<IssuedSession>
+getUserBySessionToken(token): Promise<User | null>
+signOut(token, meta): Promise<void>
 ```
 
-## Обязательные требования безопасности
+`IssuedSession.token` is raw and goes into the cookie; the database keeps only
+its SHA-256 hash. Cookies themselves are handled in `lib/session-cookie.ts` —
+this module knows nothing about HTTP.
 
-- В `email_otp` хранится **хэш** кода, не сам код.
-- Код генерируется `crypto.randomInt`, не `Math.random`.
-- Не больше `AUTH.OTP_MAX_ATTEMPTS` попыток ввода, дальше код сгорает.
-- Rate limit на запрос кода: по email И по IP (см. `config/constants.ts`).
-- Ответ «код неверный» и «код истёк» — одинаковый по времени и тексту, чтобы
-  нельзя было по ответу определить, зарегистрирован ли такой email.
-- Сессионная кука: `httpOnly`, `Secure`, `SameSite=Lax`.
-- Токен сессии в БД лежит хэшем.
+## Security decisions (implemented)
+
+- The DB stores a **hash** of the code, never the code.
+- Codes come from `crypto.randomInt`, not `Math.random`.
+- At most `AUTH.OTP_MAX_ATTEMPTS` verification attempts; the attempt is
+  counted **before** comparison, so failures are never free.
+- Constant-time hash comparison (`timingSafeEqual`).
+- Rate limits: per email and per IP on requests, per IP on verification
+  (see `config/constants.ts`).
+- "Invalid", "expired" and "missing" code produce one identical answer —
+  a distinguishable response reveals whether an email is registered.
+- A Google account with an unverified email is rejected: linking by address
+  would enable account takeover.
+- OAuth `state` is checked in the callback route (CSRF).
+- Sensitive actions land in `audit_log`.
+
+## Routes (the HTTP boundary lives in app/)
+
+| Route | Purpose |
+|---|---|
+| `POST /api/auth/email/request` | send a code |
+| `POST /api/auth/email/verify` | verify the code, set the session cookie |
+| `GET  /api/auth/google/start` | redirect to Google |
+| `GET  /api/auth/google/callback` | finish OAuth, set the session cookie |
+| `GET  /api/auth/me` | current user |
+| `POST /api/auth/signout` | end the session |
+
+## Local development
+
+Without `RESEND_API_KEY` in `.env.local` the code is printed to the dev
+server console (development only). With the key set, real emails go out.

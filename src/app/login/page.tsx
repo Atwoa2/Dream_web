@@ -1,0 +1,162 @@
+"use client";
+
+/**
+ * Minimal sign-in page: email → code, or Google.
+ * Deliberately unstyled beyond basics — real design arrives with the ported
+ * static site (stage 2).
+ */
+import { useState, type FormEvent } from "react";
+
+type Step = "email" | "code";
+
+const field: React.CSSProperties = {
+  width: "100%",
+  padding: "0.65rem 0.8rem",
+  borderRadius: 8,
+  border: "1px solid var(--border)",
+  background: "transparent",
+  color: "var(--fg)",
+  fontSize: "1rem",
+};
+
+const button: React.CSSProperties = {
+  width: "100%",
+  padding: "0.65rem",
+  borderRadius: 8,
+  border: "none",
+  background: "var(--accent)",
+  color: "#fff",
+  fontSize: "1rem",
+  cursor: "pointer",
+};
+
+export default function LoginPage() {
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function post(path: string, body: unknown): Promise<boolean> {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: { message?: string };
+        } | null;
+        setError(data?.error?.message ?? "Something went wrong");
+        return false;
+      }
+      return true;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleEmail(e: FormEvent) {
+    e.preventDefault();
+    if (await post("/api/auth/email/request", { email })) setStep("code");
+  }
+
+  async function handleCode(e: FormEvent) {
+    e.preventDefault();
+    if (await post("/api/auth/email/verify", { email, code })) {
+      window.location.href = "/";
+    }
+  }
+
+  return (
+    <main style={{ maxWidth: 380, margin: "0 auto", padding: "4rem 1.5rem" }}>
+      <h1 style={{ fontSize: "1.5rem", marginBottom: "1.5rem" }}>Sign in</h1>
+
+      {step === "email" ? (
+        <form onSubmit={handleEmail}>
+          <input
+            style={field}
+            type="email"
+            required
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoFocus
+          />
+          <button style={{ ...button, marginTop: "0.75rem" }} disabled={busy}>
+            {busy ? "Sending…" : "Send code"}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleCode}>
+          <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
+            We sent a 6-digit code to <b>{email}</b>
+          </p>
+          <input
+            style={{ ...field, letterSpacing: "0.4em", textAlign: "center" }}
+            inputMode="numeric"
+            pattern="\d{6}"
+            maxLength={6}
+            required
+            placeholder="······"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            autoFocus
+          />
+          <button style={{ ...button, marginTop: "0.75rem" }} disabled={busy}>
+            {busy ? "Checking…" : "Sign in"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep("email")}
+            style={{
+              ...button,
+              marginTop: "0.5rem",
+              background: "transparent",
+              color: "var(--muted)",
+            }}
+          >
+            Use another email
+          </button>
+        </form>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          margin: "1.5rem 0",
+          color: "var(--muted)",
+          fontSize: "0.85rem",
+        }}
+      >
+        <hr style={{ flex: 1, border: "none", borderTop: "1px solid var(--border)" }} />
+        or
+        <hr style={{ flex: 1, border: "none", borderTop: "1px solid var(--border)" }} />
+      </div>
+
+      <a
+        href="/api/auth/google/start"
+        style={{
+          ...button,
+          display: "block",
+          textAlign: "center",
+          textDecoration: "none",
+          background: "transparent",
+          border: "1px solid var(--border)",
+          color: "var(--fg)",
+        }}
+      >
+        Continue with Google
+      </a>
+
+      {error && (
+        <p style={{ color: "#ff6b6b", marginTop: "1rem", fontSize: "0.9rem" }}>{error}</p>
+      )}
+    </main>
+  );
+}
