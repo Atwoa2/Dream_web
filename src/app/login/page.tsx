@@ -5,7 +5,7 @@
  * Deliberately unstyled beyond basics — real design arrives with the ported
  * static site (stage 2).
  */
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 type Step = "email" | "code";
 
@@ -36,6 +36,14 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // The Google callback redirects here with ?error=google on any failure.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "google") {
+      setError("Google sign-in failed. Try again or use an email code.");
+    }
+  }, []);
 
   async function post(path: string, body: unknown): Promise<boolean> {
     setBusy(true);
