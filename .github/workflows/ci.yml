@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Типы, линтер, сборка
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Проверка типов
+        run: npm run typecheck
+
+      - name: Линтер
+        run: npm run lint
+
+      - name: Сборка
+        run: npm run build
+        env:
+          # Значения-заглушки: сборке нужны валидные переменные, но настоящие
+          # секреты в CI не передаются.
+          APP_URL: http://localhost:3000
+          APP_ENV: development
+          DATABASE_URL: postgresql://user:pass@localhost:5432/db
+
+  secrets:
+    name: Поиск утёкших секретов
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

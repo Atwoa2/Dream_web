@@ -1,0 +1,35 @@
+# зависимости
+node_modules/
+.pnp
+.pnp.js
+
+# сборка
+.next/
+out/
+build/
+dist/
+
+# секреты — НИКОГДА не коммитим
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# логи
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# окружение разработчика
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# прочее
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+coverage/
